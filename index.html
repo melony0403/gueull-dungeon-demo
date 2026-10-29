@@ -1,0 +1,2207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>거울 던전 팬메이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;900&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 상단 상태줄 / 전장(수감자 4칸 ← 대치 → 적 4칸) / 손패. 어두운 단일 테마(게임 화면) */
+:root{
+  --abyss:#0f0b0c; --panel:#181214; --raise:#221a1c; --line:#3a2d2e; --line-hi:#5c4744;
+  --bone:#ece0c8; --bone-dim:#ab9c8a; --bone-faint:#76695e;
+  --paper:#dfd1b4; --paper-2:#cdbd9c; --ink:#22180f; --ink-dim:#5a4a3a;
+  --brass:#d8ab3e; --brass-dim:#8d6c25;
+  --blood:#c33b2e; --blockc:#86a5c0; --sp-up:#5db8c6; --sp-down:#c04a78; --good:#7fb069;
+  --sin-wrath:#d23a40; --sin-lust:#e47d30; --sin-sloth:#d8bc45; --sin-gluttony:#86ae3f;
+  --sin-gloom:#40a8b9; --sin-pride:#4470d4; --sin-envy:#9554cc;
+  --f-display:'Noto Serif KR','Nanum Myeongjo','Batang',serif;
+  --f-body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --f-num:'IBM Plex Mono',ui-monospace,'Menlo',monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{
+  background:var(--abyss); color:var(--bone); font-family:var(--f-body); font-size:14px; line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); padding-block:0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -8%, #2b191b 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 110%, #1d1517 0%, transparent 70%);
+  background-attachment:fixed;
+}
+button{font:inherit;color:inherit}
+#app{max-width:1280px;margin:0 auto;padding-block:14px 28px;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{font-family:var(--f-display);font-weight:900;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-faint);font-weight:700}
+.muted{color:var(--bone-dim)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line-hi);background:var(--raise);color:var(--bone);padding:9px 16px;font-weight:700;cursor:pointer;border-radius:2px;transition:border-color .15s,background .15s}
+.btn:hover:not(:disabled){border-color:var(--brass)}
+.btn:focus-visible,.card:focus-visible,.unit:focus-visible,.node:focus-visible,.tile:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.primary{background:var(--brass);border-color:var(--brass);color:#1b1206}
+.btn.primary:hover:not(:disabled){background:#e6bb52}
+.btn.danger{border-color:#7a2a24;color:#f0b4ac}
+.btn.sm{padding:5px 10px;font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.panel{background:var(--panel);border:1px solid var(--line);padding:16px}
+
+/* top bar */
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.topbar .where{font-family:var(--f-display);font-weight:900;font-size:17px;margin-right:auto}
+.stat{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--bone-dim)}
+.stat b{color:var(--bone);font-family:var(--f-num)}
+.gift{display:inline-flex;border:1px solid var(--brass-dim);color:var(--brass);font-size:11px;padding:2px 7px;cursor:help;background:transparent}
+.consbtn{border:1px solid var(--line-hi);background:var(--raise);font-size:12px;padding:3px 8px;cursor:pointer}
+.consbtn.on{border-color:var(--brass);color:var(--brass)}
+
+/* combat layout */
+.combat{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:1100px){.combat{grid-template-columns:minmax(0,1fr) 260px}.combat .cside{grid-row:1/span 2;grid-column:2;align-self:start}.cside .log{max-height:400px}}
+.field{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);align-items:end;gap:8px;padding-top:96px}
+.arrows{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:5}
+.arrow-line{stroke-dashoffset:0}
+.chip.stance{border-color:#e9b949;color:#f3d68a}
+.side{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:end}
+.vs{align-self:center;text-align:center;font-family:var(--f-display);color:var(--bone-faint);font-size:12px;writing-mode:vertical-rl;letter-spacing:.3em}
+@media (max-width:760px){
+  .field{grid-template-columns:minmax(0,1fr)}
+  .vs{writing-mode:horizontal-tb;letter-spacing:.2em}
+  .field .enemyside{order:-1}
+  .field .partyside{order:1}
+  .field{padding-top:8px;gap:18px}
+}
+.slot-empty{border:1px dashed var(--line);min-height:120px;display:flex;align-items:center;justify-content:center;color:var(--bone-faint);font-size:11px}
+
+/* unit plates */
+.unit{position:relative;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--sin);padding:8px 8px 9px;display:flex;flex-direction:column;gap:5px;min-width:0;text-align:left;cursor:default}
+.unit.clickable{cursor:pointer}
+.unit.sel{outline:2px solid var(--brass);outline-offset:1px}
+.unit.targetable{outline:2px dashed var(--brass);outline-offset:1px;cursor:pointer;background:#2a2116}
+.unit.nottarget{opacity:.45}
+.unit.panic{border-color:var(--sp-down)}
+.u-top{display:flex;justify-content:space-between;font-size:10.5px;color:var(--bone-faint);letter-spacing:.06em}
+.u-top .pos{color:var(--brass);font-weight:700}
+.u-name{font-family:var(--f-display);font-weight:900;font-size:16px;line-height:1.15;overflow-wrap:anywhere}
+.u-role{font-size:11px;color:var(--bone-dim)}
+.bar{position:relative;height:15px;background:#0a0708;border:1px solid var(--line)}
+.bar>i{position:absolute;inset:0 auto 0 0;background:var(--blood);transition:width .3s}
+.bar>b{position:relative;display:block;text-align:center;font:600 10.5px/13px var(--f-num);color:#fff;text-shadow:0 1px 1px #000}
+.bar .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--brass);opacity:.85}
+.spbar{position:relative;height:7px;background:#0a0708;border:1px solid var(--line)}
+.spbar>i{position:absolute;top:0;bottom:0}
+.spbar>i.pos{background:var(--sp-up)}.spbar>i.neg{background:var(--sp-down)}
+.spbar .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--bone-faint)}
+.u-sp{display:flex;justify-content:space-between;font-size:10.5px;color:var(--bone-dim);gap:4px;flex-wrap:wrap}
+.u-sp b{font-family:var(--f-num);color:var(--bone)}
+.chips{display:flex;flex-wrap:wrap;gap:3px;min-height:4px}
+.chip{font-size:10.5px;padding:0 5px;border:1px solid var(--line-hi);color:var(--bone-dim);cursor:help;white-space:nowrap}
+.chip.block{border-color:var(--blockc);color:var(--blockc)}
+.chip.bleed,.chip.burn{border-color:#8f3a30;color:#ef9a8c}
+.chip.vuln,.chip.weak{border-color:#7a5aa0;color:#c9b0ea}
+.chip.power{border-color:var(--brass-dim);color:var(--brass)}
+.chip.guard,.chip.stag,.chip.panic{border-color:var(--brass);color:var(--brass)}
+.chip.panic{border-color:var(--sp-down);color:#f19ab9}
+.movebar{display:flex;gap:4px}
+.movebar .btn{flex:1;padding:4px 2px;font-size:11px}
+.intent{border:1px solid var(--line-hi);background:#120d0e;padding:5px 7px;font-size:11.5px;line-height:1.35;min-height:44px}
+.intent .in-name{font-weight:700;color:var(--bone)}
+.intent.atk{border-color:#6e2d27}.intent.stress{border-color:#6b2f52}.intent.cancel{opacity:.5;text-decoration:line-through}
+.intent .clash{display:block;margin-top:3px;color:var(--brass);font-weight:700}
+.dmgpop{position:absolute;right:6px;top:22px;font:700 20px var(--f-num);color:#ff8f80;text-shadow:0 2px 0 #000;pointer-events:none;animation:pop .9s ease-out forwards}
+.dmgpop.heal{color:#a9e39a}.dmgpop.blk{color:var(--blockc)}
+@keyframes pop{from{transform:translateY(4px);opacity:1}to{transform:translateY(-22px);opacity:0}}
+.unit.hit{animation:shake .32s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* hand */
+.hint{font-size:13px;color:var(--bone-dim);min-height:20px}
+.hint b{color:var(--brass)}
+.handbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+@media (max-width:760px){.handbar{grid-template-columns:auto auto;}.handbar .hand{grid-column:1/-1;order:3}}
+.energy{width:62px;height:62px;border-radius:50%;border:2px solid var(--brass);display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#3a2b12,#140e08)}
+.energy b{font:600 22px/1 var(--f-num);color:var(--brass)}
+.energy span{font-size:9.5px;color:var(--bone-faint);letter-spacing:.1em}
+.piles{font-size:11.5px;color:var(--bone-dim);display:flex;flex-direction:column;gap:2px}
+.piles b{font-family:var(--f-num);color:var(--bone)}
+.hand{display:flex;gap:8px;overflow-x:auto;padding:16px 4px 8px 12px;min-height:214px;align-items:flex-start}
+.endcol{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+
+/* cards (낡은 종이) */
+.card{flex:none;width:136px;min-height:192px;display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 9px 8px 13px;position:relative;cursor:pointer;
+  background:linear-gradient(165deg,var(--paper) 0%,var(--paper-2) 100%);color:var(--ink);border:1px solid #8a7656;border-left:5px solid var(--sin);border-radius:2px;
+  transition:transform .12s, box-shadow .12s}
+.card:hover{transform:translateY(-4px)}
+.card.sel{transform:translateY(-10px);box-shadow:0 0 0 2px var(--brass),0 8px 18px #000a}
+.card.off{filter:grayscale(.85) brightness(.62);cursor:not-allowed}
+.card.off:hover{transform:none}
+.card .cost{position:absolute;top:-8px;left:-9px;width:26px;height:26px;border-radius:50%;background:#1b1209;border:2px solid var(--brass);color:var(--brass);font:600 13px/22px var(--f-num);text-align:center}
+.card .c-owner{font-size:10.5px;font-weight:700;color:var(--ink-dim);padding-left:12px;letter-spacing:.04em}
+.card .c-name{font-family:var(--f-display);font-weight:900;font-size:15px;line-height:1.2}
+.card .c-type{font-size:10.5px;color:var(--ink-dim)}
+.card .c-desc{font-size:11.5px;line-height:1.4;flex:1;display:flex;flex-direction:column;gap:2px}
+.card .c-desc em{font-style:normal;font-weight:700}
+.card .c-pos{font-size:10px;color:var(--ink-dim);border-top:1px solid #a8946f;padding-top:3px}
+.card .why{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-6deg);background:#1b1209;color:#f2c9a0;font-size:11px;font-weight:700;padding:2px 7px;white-space:nowrap}
+.card .price{font:600 12px var(--f-num);color:#1b1209;background:var(--brass);align-self:flex-start;padding:1px 6px}
+.card.r-rare{box-shadow:inset 0 0 0 1px #b8892a}
+.card.up .c-name{color:#3c5a1e}
+
+/* log */
+.log{background:#0c0909;border:1px solid var(--line);padding:10px;font-size:12px;line-height:1.5;max-height:150px;overflow-y:auto;min-width:0}
+.log p{margin:0 0 3px}
+.log .lc{color:var(--brass)}.log .lb{color:#ef9a8c}.log .lg{color:#a9e39a}.log .ls{color:#f19ab9}.log .lt{color:var(--bone-faint);border-top:1px solid var(--line);padding-top:3px;margin-top:5px}
+.coin{display:inline-block;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--brass);margin-right:1px;vertical-align:-1px}
+.coin.h{background:var(--brass)}
+
+/* map */
+.mapwrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.mapwrap{grid-template-columns:minmax(0,1fr)}}
+.side-panel{display:flex;flex-direction:column;gap:12px}
+.mini{display:grid;gap:6px;padding:8px 10px;border:1px solid var(--line);border-left:3px solid var(--sin);background:var(--panel);text-align:left;width:100%}
+.mini.clickable{cursor:pointer}.mini.targetable{outline:2px dashed var(--brass)}
+.mini-top{display:flex;justify-content:space-between;gap:6px;font-size:12px}
+.mini-top b{font-family:var(--f-display);font-size:14px}
+.mapbox{background:var(--panel);border:1px solid var(--line);overflow:auto;max-height:78vh}
+.mapbox svg{display:block;width:100%;max-width:520px;margin:0 auto;height:auto}
+.node{cursor:default}
+.node.reach{cursor:pointer}
+.node.reach circle.ring{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{stroke-opacity:.35}}
+.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:12px;color:var(--bone-dim)}
+.legend span b{display:inline-block;width:18px;font-family:var(--f-display);color:var(--bone)}
+
+/* screens */
+.screen{display:flex;flex-direction:column;gap:16px}
+.center{max-width:860px;margin:0 auto;width:100%}
+.cards-grid{display:flex;flex-wrap:wrap;gap:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{display:flex;flex-direction:column;gap:6px;text-align:left;padding:14px;border:1px solid var(--line-hi);background:var(--raise);cursor:pointer}
+.tile:hover:not(:disabled){border-color:var(--brass)}
+.tile:disabled{opacity:.4;cursor:not-allowed}
+.tile h3{font-size:17px}
+.tile p{margin:0;font-size:13px;color:var(--bone-dim)}
+.tile .req{font-size:11.5px;color:var(--brass)}
+.result-box{border-left:3px solid var(--brass);padding:10px 14px;background:var(--raise)}
+
+/* title */
+.title{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:28px;align-items:center;padding-block:4vh}
+@media (max-width:760px){.title{grid-template-columns:minmax(0,1fr)}.mirror{order:-1;max-width:220px;margin:0 auto}}
+.title h1{font-size:clamp(44px,8vw,86px);line-height:.95}
+.title h1 small{display:block;font-size:.3em;letter-spacing:.32em;color:var(--brass);font-weight:600;margin-top:12px}
+.title .lede{max-width:46ch;color:var(--bone-dim);font-size:15px}
+.disclaimer{font-size:12px;color:var(--bone-faint);border-top:1px solid var(--line);padding-top:10px;max-width:60ch}
+.mirror svg{width:100%;height:auto;display:block}
+
+/* select */
+.sel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.pick{display:flex;flex-direction:column;gap:6px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-top:3px solid var(--sin);background:var(--panel);cursor:pointer;position:relative}
+.pick:hover{border-color:var(--line-hi);border-top-color:var(--sin)}
+.pick.on{background:#251c14;outline:2px solid var(--brass)}
+.pick .order{position:absolute;top:10px;right:12px;font:600 13px var(--f-num);color:var(--brass)}
+.pick h3{font-size:20px}
+.pick .meta{font-size:12px;color:var(--bone-dim)}
+.pick .trait{font-size:12.5px}
+.pick .trait b{color:var(--brass)}
+.formation{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fslot{border:1px solid var(--line);padding:8px;min-height:74px;display:flex;flex-direction:column;gap:4px;background:var(--panel);font-size:12px}
+.fslot b{font-family:var(--f-display);font-size:15px}
+.fslot .warn{color:#f0b4ac;font-size:11px}
+
+/* modal + toast */
+#modal{position:fixed;inset:0;background:#000b;z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;
+  padding:max(24px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.modal-box{background:var(--panel);border:1px solid var(--line-hi);max-width:880px;width:100%;padding:18px;display:flex;flex-direction:column;gap:14px}
+.modal-box h2{font-size:22px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 22px;font-size:13px}
+.rules h3{font-size:15px;color:var(--brass);margin-bottom:3px}
+.rules p{margin:0;color:var(--bone-dim)}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b1209;border:1px solid var(--brass);color:var(--bone);padding:8px 14px;font-size:13px;z-index:60;max-width:calc(100% - 32px)}
+/* 기프트 목록 */
+.glist{display:grid;gap:6px}
+.gitem{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border:1px solid var(--line);border-left:3px solid var(--brass);background:var(--panel)}
+.gitem b{color:var(--brass);font-size:13px}
+.gitem span{font-size:12px;color:var(--bone-dim);line-height:1.4}
+.cside{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card.benched{filter:grayscale(.7) brightness(.7)}
+/* 테마 팩 */
+.packs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.packcard{display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--sin)}
+.packcard h3{font-size:22px}
+.packinfo{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;margin:0;font-size:13px}
+.packinfo dt{color:var(--bone-faint);font-size:12px}
+.packinfo dd{margin:0}
+.giftlist{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--bone-dim);display:grid;gap:3px}
+.giftlist b{color:var(--brass)}
+.packcard .btn{margin-top:auto}
+/* 행동 강조 */
+.unit{transition:transform .2s ease, box-shadow .2s ease}
+.partyside .unit.acting{transform:translate(10px,-6px);box-shadow:0 0 0 2px var(--brass),0 0 22px #d8ab3e55}
+.enemyside .unit.acting{transform:translate(-10px,-6px);box-shadow:0 0 0 2px var(--brass),0 0 22px #d8ab3e55}
+.unit.targeted{box-shadow:0 0 0 2px var(--blood),0 0 18px #c33b2e66}
+.unit.hit{animation:shake .32s, hitflash .45s}
+@keyframes hitflash{0%{background:#5a1c18}100%{background:var(--panel)}}
+/* 코인 연출 패널 */
+#stage{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;width:min(640px,calc(100% - 32px));cursor:pointer}
+.stg{background:linear-gradient(180deg,#221a1c,#120d0e);border:1px solid var(--brass-dim);box-shadow:0 20px 50px #000d,0 0 0 1px #000;padding:12px 14px 8px;display:grid;gap:10px;animation:stgin .18s ease-out}
+@keyframes stgin{from{transform:translateY(14px);opacity:0}}
+.stg-head{font-family:var(--f-display);font-weight:900;font-size:15px;text-align:center;color:var(--bone)}
+.stg-skip{font-size:10.5px;color:var(--bone-faint);text-align:right}
+.duel{display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);gap:8px;align-items:stretch}
+.duel.single{grid-template-columns:minmax(0,1fr);max-width:340px;width:100%;margin:0 auto}
+.dside{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 8px;border:1px solid var(--line);border-top:3px solid var(--sin);background:#140f10;transition:background .2s,border-color .2s,opacity .25s,transform .2s;min-width:0;text-align:center}
+.dside.rwin{background:#2b2213;border-color:var(--brass);border-top-color:var(--sin);transform:scale(1.03)}
+.dside.rlose{opacity:.7}
+.dside.win{background:#2f2412;border-color:var(--brass);border-top-color:var(--sin);transform:scale(1.05)}
+.dside.lose{opacity:.4;transform:scale(.96)}
+.dname{font-family:var(--f-display);font-weight:900;font-size:15px;overflow-wrap:anywhere}
+.dskill{font-size:11.5px;color:var(--bone-dim)}
+.dtotal{font:600 38px/1 var(--f-num);color:var(--brass);margin:2px 0}
+.dtotal.bump{animation:bump .24s ease-out}
+@keyframes bump{50%{transform:scale(1.3);color:#fff2c4}}
+.dcoins{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:34px;align-items:center;margin-top:10px}
+.dsub{font-size:10.5px;color:var(--bone-faint)}
+.c3{width:30px;height:30px;border-radius:50%;border:2px solid var(--brass-dim);background:radial-gradient(circle at 40% 35%,#2a1f14,#120c08);display:inline-flex;align-items:center;justify-content:center;font:600 11px var(--f-num);color:var(--brass-dim)}
+.c3::after{content:'?'}
+.c3.toss{animation:toss .3s ease-in-out;border-color:var(--brass)}
+.c3.h{background:radial-gradient(circle at 35% 30%,#ffe7a0,#d8ab3e 55%,#7d5c1c);border-color:#ffe7a0;color:#2a1a05;box-shadow:0 0 12px #d8ab3e88}
+.c3.h::after{content:attr(data-cp)}
+.c3.t{background:#231b1a;border-color:#5c4744;color:var(--bone-faint)}
+.c3.t::after{content:'0'}
+.c3.big{width:58px;height:58px;font-size:12px;border-width:3px}
+.c3.chk::after{content:'?'}.c3.chk.h::after{content:'성공'}.c3.chk.t::after{content:'실패'}
+.okc{color:var(--brass)}.failc{color:#ef9a8c}
+.c3.gone{animation:shatter .4s forwards}
+@keyframes toss{0%{transform:translateY(0) scaleX(1)}25%{transform:translateY(-16px) scaleX(.12)}50%{transform:translateY(-22px) scaleX(1)}75%{transform:translateY(-12px) scaleX(.12)}100%{transform:translateY(0) scaleX(1)}}
+@keyframes shatter{0%{transform:scale(1)}40%{transform:scale(1.2) rotate(-12deg);border-color:var(--blood)}100%{transform:scale(.5) rotate(30deg);opacity:.15;border-color:var(--blood)}}
+.vsx{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.vsx b{font-family:var(--f-display);font-size:22px;color:var(--brass)}
+.vsx span{font-size:11px;color:var(--bone-dim);font-family:var(--f-num)}
+.verdict{text-align:center;font-size:13px;color:var(--bone-dim);min-height:20px}
+.verdict.big{font-size:17px;color:var(--bone);padding:6px 0 4px}
+.verdict.hitv,.verdict.winv{color:var(--brass);font-size:16px;font-weight:700}
+.verdict.losev{color:#ef9a8c;font-size:16px;font-weight:700}
+.verdict .ls{color:#f19ab9}
+@media (max-width:480px){.duel{grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr)}.dtotal{font-size:30px}.c3{width:24px;height:24px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+<div id="modal" hidden></div>
+<div id="toast" hidden></div>
+<div id="stage" hidden aria-live="polite"></div>
+
+<script>
+(()=>{
+'use strict';
+
+/* =========================================================
+   1. 유틸
+   ========================================================= */
+const rnd=()=>Math.random();
+const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let UIDN=1; const uid=()=>'k'+Date.now().toString(36)+(UIDN++).toString(36);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const REDUCED=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SAVE_KEY='mirror-dungeon-fanmade-v1';
+const SP_MIN=-45, SP_MAX=45;
+const posTxt=a=>!a?'':a.length===4?'모든 열':(a.every((v,i)=>i===0||v===a[i-1]+1)?(a.length===1?`${a[0]}열`:`${a[0]}~${a[a.length-1]}열`):a.join('·')+'열');
+
+/* =========================================================
+   2. 데이터 (규칙과 분리)
+   ========================================================= */
+const SINS={wrath:'분노',lust:'색욕',sloth:'나태',gluttony:'탐식',gloom:'우울',pride:'오만',envy:'질투'};
+
+const STATUS={
+  bleed:{n:'출혈',d:'공격할 때마다 수치만큼 피해를 입고(방어도 무시) 수치가 1 줄어든다.'},
+  burn:{n:'화상',d:'라운드가 끝날 때 수치만큼 피해를 입고(방어도 무시) 수치가 1 줄어든다.'},
+  vuln:{n:'취약',d:'받는 피해 +50%. 라운드가 끝날 때 1 줄어든다.'},
+  weak:{n:'약화',d:'주는 피해 -25%. 라운드가 끝날 때 1 줄어든다.'},
+  power:{n:'위력',d:'공격 위력이 수치만큼 오른다. 전투 동안 유지된다.'},
+};
+
+// 림버스 기본 정신력 규칙: 전투마다 0에서 시작, 합 승리·적 처치로 오르고 동료가 쓰러지면 내려간다.
+// 인격마다 sp 항목으로 덮어쓸 수 있다.
+const SP_RULE={start:0,clashWin:10,kill:10,allyDown:-10,clashLose:0,lossMul:1};
+const SINNERS={
+  yisang:{identity:'LCB 수감자',name:'이상',no:1,role:'심문관',sin:'gloom',sins:['gloom','sloth'],hp:48,pos:[2,3,4],
+    trait:{n:'가라앉는 날개',d:'이상의 공격에 맞은 적은 약화 1을 받는다.'}},
+  faust:{identity:'LCB 수감자',name:'파우스트',no:2,role:'분석가',sin:'pride',sins:['pride','sloth'],hp:46,pos:[3,4],
+    trait:{n:'선행 분석',d:'파우스트가 진형에 있으면 전투 첫 턴에 카드를 1장 더 뽑는다.'}},
+  donqui:{identity:'LCB 수감자',name:'돈키호테',no:3,role:'결투가',sin:'lust',sins:['lust','wrath'],hp:56,pos:[1,2],
+    trait:{n:'정의의 돌격',d:'턴마다 처음으로 합에서 이기면 에너지 +1.'}},
+  hongru:{identity:'LCB 수감자',name:'홍루',no:6,role:'의무관',sin:'sloth',sins:['sloth','gluttony'],hp:50,pos:[2,3,4],sp:{lossMul:.5},
+    trait:{n:'느긋한 여유',d:'이 인격은 잃는 SP가 절반만 적용된다.'}},
+  heath:{identity:'LCB 수감자',name:'히스클리프',no:7,role:'광전사',sin:'wrath',sins:['wrath','envy'],hp:60,pos:[1,2],
+    trait:{n:'꺼지지 않는 분노',d:'SP가 0보다 낮으면 히스클리프의 공격 위력 +2.'}},
+  outis:{identity:'LCB 수감자',name:'오티스',no:11,role:'수호자',sin:'envy',sins:['envy','pride'],hp:64,pos:[1,2],
+    trait:{n:'선봉의 규율',d:'전투 시작 시 오티스는 방어도 6을 얻는다.'}},
+};
+
+// 카드: fx 배열을 순서대로 처리. up은 강화 시 fx를 고치는 함수.
+const CARDS={
+  // 이상
+  ys_pen:{name:'가라앉는 펜촉',owner:'yisang',type:'공격',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3],fx:[{t:'atk',base:3,coins:2,cp:2}],up:f=>{f[0].base=5},starter:2},
+  ys_veil:{name:'회색 장막',owner:'yisang',type:'방어',rar:'일반',cost:1,from:[1,2,3,4],target:'ally',fx:[{t:'block',n:5}],up:f=>{f[0].n=8},starter:1},
+  ys_fall:{name:'날개 없는 추락',owner:'yisang',type:'심리',rar:'일반',cost:2,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:3,coins:3,cp:3},{t:'status',s:'weak',n:1}],up:f=>{f[0].base=5;f[1].n=2},starter:1},
+  ys_sink:{name:'침잠',owner:'yisang',type:'심리',rar:'일반',cost:1,from:[2,3,4],target:'allEnemies',tpos:[1,2,3,4],fx:[{t:'status',s:'weak',n:1},{t:'sp',n:5,to:'allAllies'}],up:f=>{f[0].n=2}},
+  ys_wing:{name:'거울 속 날갯짓',owner:'yisang',type:'기술',rar:'고급',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'draw',n:2},{t:'sp',n:-6}],up:f=>{f[0].n=3}},
+  ys_ink:{name:'번지는 잉크',owner:'yisang',type:'공격',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:3,cp:2}],up:f=>{f[0].base=4}},
+  ys_alone:{name:'고독한 사색',owner:'yisang',type:'심리',rar:'희귀',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:1,cp:2,per:{s:'weak',n:3}}],up:f=>{f[0].per.n=5}},
+  // 파우스트
+  fa_strike:{name:'정밀 타격',owner:'faust',type:'공격',rar:'일반',cost:1,from:[3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:3,coins:2,cp:2}],up:f=>{f[0].base=5},starter:2},
+  fa_plan:{name:'계산된 동선',owner:'faust',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'draw',n:2}],upCost:0,starter:1},
+  fa_scan:{name:'약점 분석',owner:'faust',type:'기술',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'status',s:'vuln',n:2}],up:f=>{f[0].n=3},starter:1},
+  fa_flaw:{name:'결함 지적',owner:'faust',type:'심리',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'status',s:'vuln',n:1},{t:'status',s:'weak',n:1},{t:'draw',n:1}],up:f=>{f[0].n=2;f[1].n=2}},
+  fa_pierce:{name:'관통하는 증명',owner:'faust',type:'공격',rar:'일반',cost:2,from:[3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:4,coins:3,cp:3},{t:'status',s:'vuln',n:1}],up:f=>{f[0].base=7}},
+  fa_fund:{name:'자원 재분배',owner:'faust',type:'기술',rar:'고급',cost:0,from:[1,2,3,4],target:'self',exhaust:1,fx:[{t:'energy',n:2}],up:f=>{f.push({t:'draw',n:1})}},
+  fa_answer:{name:'전지의 해답',owner:'faust',type:'기술',rar:'희귀',cost:2,from:[1,2,3,4],target:'self',exhaust:1,fx:[{t:'draw',n:3},{t:'sp',n:10,to:'allAllies'}],upCost:1},
+  // 돈키호테
+  dq_lance:{name:'랜스 찌르기',owner:'donqui',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:4,coins:2,cp:2}],up:f=>{f[0].base=6},starter:2},
+  dq_stance:{name:'기사도 스텝',owner:'donqui',type:'회피',rar:'일반',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'stance',k:'evade',base:4,coins:2,cp:3}],up:f=>{f[0].base=6},starter:1},
+  dq_charge:{name:'정의를 향한 돌격',owner:'donqui',type:'공격',rar:'일반',cost:2,from:[1,2,3],target:'enemy',tpos:[1,2,3],fx:[{t:'move',to:1},{t:'atk',base:5,coins:3,cp:3}],up:f=>{f[1].base=8},starter:1},
+  dq_vow:{name:'기사의 맹세',owner:'donqui',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'power',n:2},{t:'sp',n:5}],up:f=>{f[0].n=3}},
+  dq_thrust:{name:'기사의 일격',owner:'donqui',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2,3],fx:[{t:'atk',base:3,coins:3,cp:2}],up:f=>{f[0].base=5}},
+  dq_flurry:{name:'돌진 연타',owner:'donqui',type:'공격',rar:'고급',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:1,coins:4,cp:2}],up:f=>{f[0].coins=5}},
+  dq_legend:{name:'꿈꾸는 영웅담',owner:'donqui',type:'공격',rar:'희귀',cost:3,from:[1,2],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:9,coins:4,cp:4}],upCost:2},
+  // 홍루
+  hr_fan:{name:'부채 휘두르기',owner:'hongru',type:'공격',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:3,coins:2,cp:2}],up:f=>{f[0].base=5},starter:2},
+  hr_tea:{name:'따뜻한 차',owner:'hongru',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'ally',fx:[{t:'heal',n:6},{t:'sp',n:8}],up:f=>{f[0].n=9},starter:1},
+  hr_smile:{name:'여유로운 미소',owner:'hongru',type:'심리',rar:'일반',cost:1,from:[1,2,3,4],target:'allAllies',fx:[{t:'sp',n:10}],up:f=>{f[0].n=15},starter:1},
+  hr_pin:{name:'비녀 찌르기',owner:'hongru',type:'공격',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3],fx:[{t:'atk',base:2,coins:2,cp:3},{t:'status',s:'bleed',n:2}],up:f=>{f[1].n=4}},
+  hr_herb:{name:'약초 꾸러미',owner:'hongru',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'ally',fx:[{t:'heal',n:4},{t:'cleanse'}],up:f=>{f[0].n=7}},
+  hr_fence:{name:'가벼운 몸놀림',owner:'hongru',type:'회피',rar:'고급',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'stance',k:'evade',base:3,coins:3,cp:3},{t:'sp',n:3}],up:f=>{f[0].base=5}},
+  hr_feast:{name:'넉넉한 연회',owner:'hongru',type:'기술',rar:'희귀',cost:2,from:[1,2,3,4],target:'allAllies',exhaust:1,fx:[{t:'heal',n:6},{t:'sp',n:10}],up:f=>{f[0].n=9}},
+  // 히스클리프
+  hc_club:{name:'몽둥이질',owner:'heath',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:4,coins:1,cp:4}],up:f=>{f[0].base=6},starter:2},
+  hc_brace:{name:'이 악물기',owner:'heath',type:'수비',rar:'일반',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'stance',k:'guard',base:4,coins:1,cp:5}],up:f=>{f[0].base=7},starter:1},
+  hc_storm:{name:'폭풍의 언덕',owner:'heath',type:'공격',rar:'일반',cost:2,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:6,coins:2,cp:4,spScale:1},{t:'selfdmg',n:3}],up:f=>{f[0].base=9},starter:1},
+  hc_fist:{name:'거친 주먹',owner:'heath',type:'공격',rar:'일반',cost:0,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:2,coins:1,cp:3}],up:f=>{f[0].base=4}},
+  hc_boil:{name:'끓어오르는 분노',owner:'heath',type:'기술',rar:'일반',cost:0,from:[1,2,3,4],target:'self',fx:[{t:'sp',n:-12},{t:'power',n:2}],up:f=>{f[1].n=3}},
+  hc_sweep:{name:'휩쓸기',owner:'heath',type:'공격',rar:'고급',cost:2,from:[1,2],target:'allEnemies',tpos:[1,2,3],fx:[{t:'atk',base:3,coins:2,cp:2}],up:f=>{f[0].base=5}},
+  hc_wild:{name:'광폭',owner:'heath',type:'공격',rar:'희귀',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:3,coins:3,cp:3,spScale:1},{t:'status',s:'bleed',n:3},{t:'selfdmg',n:2}],up:f=>{f[1].n=5}},
+  // 오티스
+  ot_bayonet:{name:'총검 찌르기',owner:'outis',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:4,coins:2,cp:2}],up:f=>{f[0].base=6},starter:2},
+  ot_wall:{name:'방벽 구축',owner:'outis',type:'수비',rar:'일반',cost:1,from:[1,2,3,4],target:'self',fx:[{t:'stance',k:'guard',base:5,coins:2,cp:3}],up:f=>{f[0].base=8},starter:1},
+  ot_cover:{name:'엄호 명령',owner:'outis',type:'방어',rar:'일반',cost:1,from:[1,2],target:'ally',noSelf:1,fx:[{t:'guard'},{t:'block',n:4,to:'self'}],up:f=>{f[1].n=7},starter:1},
+  ot_drill:{name:'대열 정비',owner:'outis',type:'이동',rar:'일반',cost:0,from:[2,3,4],target:'self',fx:[{t:'move',d:-1},{t:'block',n:3}],up:f=>{f[1].n=6}},
+  ot_snipe:{name:'저격 명령',owner:'outis',type:'공격',rar:'일반',cost:1,from:[1,2,3,4],target:'enemy',tpos:[3,4],fx:[{t:'atk',base:4,coins:2,cp:3}],up:f=>{f[0].base=6}},
+  ot_volley:{name:'일제 사격',owner:'outis',type:'공격',rar:'고급',cost:2,from:[1,2,3,4],target:'allEnemies',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:2,cp:2}],up:f=>{f[0].base=4}},
+  ot_iron:{name:'철의 규율',owner:'outis',type:'방어',rar:'희귀',cost:2,from:[1,2,3,4],target:'allAllies',fx:[{t:'block',n:6},{t:'sp',n:5}],up:f=>{f[0].n=9}},
+  // ===== 추가 카드: 다단 히트 · X 비용 · 파워 · 보존/선천성/휘발 =====
+  ys_couplet:{name:'두 줄의 시',owner:'yisang',type:'공격',rar:'일반',cost:1,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:1,cp:3,times:2}],up:f=>{f[0].base=3}},
+  ys_haze:{name:'흩어지는 생각',owner:'yisang',type:'심리',rar:'일반',cost:0,from:[1,2,3,4],target:'enemy',tpos:[1,2,3,4],ethereal:1,fx:[{t:'status',s:'weak',n:2}],up:f=>{f[0].n=3}},
+  ys_beyond:{name:'거울 너머의 나',owner:'yisang',type:'기술',rar:'고급',cost:1,from:[1,2,3,4],target:'self',retain:1,fx:[{t:'draw',n:1},{t:'energy',n:1}],up:f=>{f[0].n=2}},
+  ys_void:{name:'공허를 긋는 펜',owner:'yisang',type:'공격',rar:'고급',cost:'X',from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:1,cp:3,coinsX:1}],up:f=>{f[0].base=5}},
+  ys_dream:{name:'날개의 꿈',owner:'yisang',type:'파워',rar:'희귀',cost:2,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'weakAura',n:1}],upCost:1},
+  fa_insight:{name:'번뜩이는 통찰',owner:'faust',type:'기술',rar:'일반',cost:0,from:[1,2,3,4],target:'self',innate:1,exhaust:1,fx:[{t:'draw',n:2}],up:f=>{f[0].n=3}},
+  fa_target:{name:'표적 지정',owner:'faust',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'enemy',tpos:[1,2,3,4],retain:1,fx:[{t:'status',s:'vuln',n:2}],up:f=>{f[0].n=3}},
+  fa_proof:{name:'증명 완료',owner:'faust',type:'공격',rar:'고급',cost:1,from:[3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:2,coins:2,cp:2,per:{s:'vuln',n:3}}],up:f=>{f[0].per.n=4}},
+  fa_barrage:{name:'지식의 폭풍',owner:'faust',type:'공격',rar:'희귀',cost:2,from:[2,3,4],target:'enemy',tpos:[1,2,3,4],fx:[{t:'atk',base:1,coins:1,cp:3,times:4}],up:f=>{f[0].base=2}},
+  fa_engine:{name:'멈추지 않는 연산',owner:'faust',type:'파워',rar:'고급',cost:1,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'drawEach',n:1}],upCost:0},
+  dq_twin:{name:'쌍창 찌르기',owner:'donqui',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:2,coins:2,cp:2,times:2}],up:f=>{f[0].base=3}},
+  dq_rally:{name:'기사단의 함성',owner:'donqui',type:'심리',rar:'일반',cost:1,from:[1,2,3,4],target:'allAllies',fx:[{t:'sp',n:8},{t:'power',n:1,to:'self'}],up:f=>{f[0].n=12}},
+  dq_pierce:{name:'꿰뚫는 돌진',owner:'donqui',type:'공격',rar:'고급',cost:2,from:[1,2],target:'allEnemies',tpos:[1,2],fx:[{t:'atk',base:4,coins:2,cp:3}],up:f=>{f[0].base=6}},
+  dq_reckless:{name:'무모한 돌격',owner:'donqui',type:'공격',rar:'고급',cost:'X',from:[1,2],target:'enemy',tpos:[1,2,3],fx:[{t:'atk',base:3,coins:1,cp:3,coinsX:1}],up:f=>{f[0].base=6}},
+  dq_dream:{name:'편력기사의 꿈',owner:'donqui',type:'파워',rar:'희귀',cost:2,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'powerEach',n:1}],upCost:1},
+  hr_umbrella:{name:'우산 아래',owner:'hongru',type:'방어',rar:'일반',cost:1,from:[1,2,3,4],target:'ally',retain:1,fx:[{t:'block',n:7}],up:f=>{f[0].n=10}},
+  hr_teacup:{name:'찻잔 돌리기',owner:'hongru',type:'기술',rar:'일반',cost:0,from:[1,2,3,4],target:'allAllies',exhaust:1,fx:[{t:'sp',n:5},{t:'draw',n:1}],up:f=>{f[1].n=2}},
+  hr_tip:{name:'넉넉한 웃돈',owner:'hongru',type:'기술',rar:'고급',cost:0,from:[1,2,3,4],target:'self',ethereal:1,fx:[{t:'energy',n:1},{t:'draw',n:1}],up:f=>{f[1].n=2}},
+  hr_needles:{name:'은침 세례',owner:'hongru',type:'공격',rar:'고급',cost:1,from:[2,3,4],target:'allEnemies',tpos:[1,2,3],fx:[{t:'atk',base:1,coins:2,cp:2},{t:'status',s:'bleed',n:2}],up:f=>{f[1].n=3}},
+  hr_garden:{name:'정원의 오후',owner:'hongru',type:'파워',rar:'희귀',cost:2,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'regenAll',n:2}],up:f=>{f[0].n=3}},
+  hc_reckless:{name:'무모한 한 방',owner:'heath',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:7,coins:1,cp:4},{t:'selfdmg',n:4},{t:'sp',n:-5}],up:f=>{f[0].base=10}},
+  hc_double:{name:'연속 몽둥이질',owner:'heath',type:'공격',rar:'일반',cost:1,from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:3,coins:1,cp:3,times:2}],up:f=>{f[0].base=4}},
+  hc_howl:{name:'울부짖음',owner:'heath',type:'심리',rar:'고급',cost:0,from:[1,2,3,4],target:'allEnemies',tpos:[1,2,3,4],ethereal:1,fx:[{t:'status',s:'weak',n:1},{t:'sp',n:-8,to:'self'}],up:f=>{f[0].n=2}},
+  hc_fury:{name:'분노의 연타',owner:'heath',type:'공격',rar:'희귀',cost:'X',from:[1,2],target:'enemy',tpos:[1,2],fx:[{t:'atk',base:4,coins:1,cp:4,timesX:1,spScale:1}],up:f=>{f[0].base=6}},
+  hc_moor:{name:'황야의 바람',owner:'heath',type:'파워',rar:'고급',cost:1,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'rageOnHit',n:1}],upCost:0},
+  ot_brief:{name:'작전 브리핑',owner:'outis',type:'기술',rar:'일반',cost:1,from:[1,2,3,4],target:'allAllies',innate:1,fx:[{t:'draw',n:2},{t:'sp',n:3}],up:f=>{f[0].n=3}},
+  ot_flank:{name:'측면 포격',owner:'outis',type:'공격',rar:'일반',cost:1,from:[1,2,3,4],target:'enemy',tpos:[2,3,4],fx:[{t:'atk',base:3,coins:2,cp:2},{t:'status',s:'vuln',n:1}],up:f=>{f[0].base=5}},
+  ot_hold:{name:'버텨라',owner:'outis',type:'방어',rar:'고급',cost:1,from:[1,2,3,4],target:'allAllies',retain:1,fx:[{t:'block',n:4}],up:f=>{f[0].n=6}},
+  ot_doctrine:{name:'전열 교범',owner:'outis',type:'파워',rar:'고급',cost:1,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'frontBlock',n:5}],up:f=>{f[0].n=8}},
+  ot_counter:{name:'역습 태세',owner:'outis',type:'파워',rar:'희귀',cost:2,from:[1,2,3,4],target:'none',fx:[{t:'aura',k:'counterBleed',n:2}],up:f=>{f[0].n=3}},
+  // 무색 카드: 누구나 쓸 수 있다 (상점에서 판매)
+  nc_breath:{name:'숨 고르기',owner:null,neutral:1,type:'기술',rar:'고급',cost:0,target:'allAllies',exhaust:1,fx:[{t:'sp',n:6}],up:f=>{f[0].n=10}},
+  nc_aid:{name:'응급 처치',owner:null,neutral:1,type:'기술',rar:'고급',cost:1,target:'ally',exhaust:1,fx:[{t:'heal',n:8}],up:f=>{f[0].n=12}},
+  nc_order:{name:'단테의 지시',owner:null,neutral:1,type:'기술',rar:'고급',cost:0,target:'none',exhaust:1,fx:[{t:'draw',n:2}],up:f=>{f[0].n=3}},
+  nc_shell:{name:'엔케팔린 탄',owner:null,neutral:1,type:'공격',rar:'고급',cost:1,target:'allEnemies',exhaust:1,fx:[{t:'dmg',n:6}],up:f=>{f[0].n=9}},
+  nc_haste:{name:'가속',owner:null,neutral:1,type:'기술',rar:'희귀',cost:1,target:'none',exhaust:1,fx:[{t:'energy',n:2}],up:f=>{f[0].n=3}},
+  // 상태·저주
+  crack:{name:'거울 균열',owner:null,type:'상태',rar:'상태',cost:1,target:'none',exhaust:1,fx:[],note:'아무 효과 없다. 쓰면 소멸한다.'},
+  debt:{name:'피의 빚',owner:null,type:'저주',rar:'저주',cost:null,unplayable:1,target:'none',fx:[],note:'사용할 수 없다. 턴이 끝날 때 손에 있으면 무작위 수감자 SP -5.'},
+};
+
+const ENEMIES={
+  rat:{name:'뒷골목 쥐',hp:[15,19],sin:'gluttony',stag:[.5],moves:[
+    {name:'물어뜯기',type:'atk',base:3,coins:2,cp:2,tgt:'front'},
+    {name:'녹슨 칼질',type:'atk',base:2,coins:1,cp:2,tgt:'any',st:{s:'bleed',n:2}}]},
+  ratboss:{name:'쥐 두목',hp:[30,34],sin:'wrath',stag:[.5],moves:[
+    {name:'패거리 호령',type:'buff',power:2,tgt:'allEnemies'},
+    {name:'쇠파이프',type:'atk',base:5,coins:2,cp:3,tgt:'front'},
+    {name:'뒤통수',type:'atk',base:4,coins:2,cp:2,tgt:'back'}]},
+  candle:{name:'흐느끼는 촛대',tag:'환상체',hp:[22,26],sin:'gloom',stag:[.5],moves:[
+    {name:'흐느낌',type:'stress',sp:7,tgt:'all'},
+    {name:'뜨거운 촛농',type:'atk',base:3,coins:2,cp:2,tgt:'back',st:{s:'burn',n:3}}]},
+  fixer:{name:'갈퀴 해결사',hp:[30,34],sin:'envy',stag:[.5],moves:[
+    {name:'갈퀴 걸기',type:'atk',base:4,coins:2,cp:2,tgt:'front'},
+    {name:'자세 잡기',type:'block',block:8},
+    {name:'힘줄 끊기',type:'atk',base:4,coins:2,cp:3,tgt:'any',st:{s:'weak',n:1}}]},
+  clock:{name:'녹슨 시계공',elite:1,hp:[64,68],sin:'sloth',stag:[.5],moves:[
+    {name:'톱니 난사',type:'atk',base:3,coins:1,cp:3,tgt:'all'},
+    {name:'시간 비틀기',type:'debuff',st:{s:'vuln',n:2},tgt:'front'},
+    {name:'정각의 일격',type:'atk',base:8,coins:3,cp:3,tgt:'front'},
+    {name:'태엽 감기',type:'block',block:10,power:1}]},
+  shard:{name:'거울 파편',hp:[9,11],sin:'pride',stag:[],moves:[
+    {name:'반사',type:'atk',base:2,coins:2,cp:2,tgt:'any'}]},
+  acolyte:{name:'촛농 신도',hp:[19,23],sin:'gloom',stag:[.5],moves:[
+    {name:'타는 손',type:'atk',base:3,coins:2,cp:2,tgt:'front',st:{s:'burn',n:2}},
+    {name:'중얼거림',type:'stress',sp:6,tgt:'any'}]},
+  gearling:{name:'톱니 인형',hp:[18,22],sin:'sloth',stag:[.5],moves:[
+    {name:'태엽 돌리기',type:'block',block:6},
+    {name:'톱니 물기',type:'atk',base:3,coins:3,cp:2,tgt:'any'}]},
+  hookboss:{name:'갈퀴 사무소장',boss:1,tag:'해결사',hp:[120,120],sin:'envy',stag:[.66,.33],phases:[
+    [{name:'걸어 당기기',type:'atk',base:6,coins:2,cp:3,tgt:'back',st:{s:'bleed',n:2}},
+     {name:'사무소 규정',type:'block',block:10,power:1},
+     {name:'갈퀴 찍기',type:'atk',base:5,coins:3,cp:2,tgt:'front',st:{s:'weak',n:1}}],
+    [{name:'부하 호출',type:'summon',n:2,unit:'rat'},
+     {name:'휩쓰는 갈퀴',type:'atk',base:4,coins:2,cp:2,tgt:'all',st:{s:'bleed',n:2}},
+     {name:'목덜미 낚기',type:'atk',base:8,coins:3,cp:3,tgt:'lowSp'}],
+    [{name:'끝까지 추심',type:'atk',base:10,coins:3,cp:3,tgt:'front',st:{s:'bleed',n:3}},
+     {name:'피 묻은 계산서',type:'stress',sp:10,tgt:'all'},
+     {name:'휩쓰는 갈퀴',type:'atk',base:5,coins:2,cp:3,tgt:'all',st:{s:'bleed',n:2}}]]},
+  waxsaint:{name:'촛농의 성녀',boss:1,tag:'환상체',hp:[125,125],sin:'gloom',stag:[.66,.33],phases:[
+    [{name:'고해 성사',type:'stress',sp:10,tgt:'all'},
+     {name:'녹아내리는 축복',type:'atk',base:5,coins:2,cp:3,tgt:'back',st:{s:'burn',n:3}},
+     {name:'밀랍 장막',type:'block',block:12}],
+    [{name:'신도 부르기',type:'summon',n:2,unit:'acolyte'},
+     {name:'촛불 행렬',type:'atk',base:4,coins:2,cp:2,tgt:'all',st:{s:'burn',n:2}},
+     {name:'참회의 시선',type:'stress',sp:12,tgt:'all'}],
+    [{name:'타오르는 성흔',type:'atk',base:9,coins:3,cp:3,tgt:'lowSp',st:{s:'burn',n:3}},
+     {name:'참회의 시선',type:'stress',sp:12,tgt:'all'},
+     {name:'촛불 행렬',type:'atk',base:5,coins:2,cp:3,tgt:'all',st:{s:'burn',n:2}}]]},
+  clockboss:{name:'시침의 기계공',boss:1,tag:'환상체',hp:[130,130],sin:'sloth',stag:[.66,.33],phases:[
+    [{name:'초침 찌르기',type:'atk',base:6,coins:3,cp:2,tgt:'front'},
+     {name:'시간 비틀기',type:'debuff',st:{s:'vuln',n:2},tgt:'front'},
+     {name:'태엽 감기',type:'block',block:12,power:1}],
+    [{name:'톱니 인형 조립',type:'summon',n:2,unit:'gearling'},
+     {name:'분침 휘두르기',type:'atk',base:4,coins:2,cp:3,tgt:'all'},
+     {name:'정각의 일격',type:'atk',base:9,coins:3,cp:3,tgt:'front'}],
+    [{name:'멈춘 시간',type:'push',cards:2},
+     {name:'자정의 종',type:'atk',base:10,coins:3,cp:3,tgt:'lowSp'},
+     {name:'분침 휘두르기',type:'atk',base:5,coins:2,cp:3,tgt:'all'}]]},
+  boss:{name:'깨진 거울의 메아리',boss:1,tag:'환상체',hp:[135,135],sin:'pride',stag:[.66,.33],phases:[
+    [{name:'금 가는 소리',type:'atk',base:6,coins:2,cp:3,tgt:'front'},
+     {name:'불협 메아리',type:'stress',sp:9,tgt:'all'},
+     {name:'되비침',type:'block',block:12,power:1}],
+    [{name:'뒤집힌 상',type:'push',cards:2},
+     {name:'파편 비',type:'atk',base:4,coins:1,cp:3,tgt:'all',st:{s:'burn',n:2}},
+     {name:'가장 흔들리는 자',type:'atk',base:8,coins:3,cp:3,tgt:'lowSp'}],
+    [{name:'증식',type:'summon',n:2},
+     {name:'산산조각',type:'atk',base:9,coins:3,cp:3,tgt:'lowSp'},
+     {name:'끝없는 메아리',type:'stress',sp:12,tgt:'all'},
+     {name:'파편 폭풍',type:'atk',base:5,coins:2,cp:2,tgt:'all'}]]},
+};
+// 테마 팩: 층마다 하나를 골라 그 층의 적·보스·기프트·특성이 정해진다
+const FLOORS=3;
+const PACKS={
+  alley:{name:'뒷골목의 밤',sin:'envy',text:'해결사와 건달이 판치는 골목. 출혈을 주고받는 싸움이 잦다.',
+    enc:{easy:[['rat','rat'],['rat','rat','rat']],hard:[['ratboss','rat','rat'],['fixer','rat'],['fixer','fixer']],elite:[['fixer','ratboss'],['fixer','fixer','rat']]},
+    boss:'hookboss',gifts:['hook','thread','chalice','ledger'],perk:{enk:8},perkTxt:'전투 보상 엔케팔린 +8'},
+  chapel:{name:'흐느끼는 성당',sin:'gloom',text:'촛농이 흘러내리는 성당. 정신 공격과 화상이 몰아친다.',
+    enc:{easy:[['candle','acolyte'],['acolyte','acolyte']],hard:[['candle','candle','acolyte'],['acolyte','acolyte','candle']],elite:[['candle','candle','candle'],['acolyte','acolyte','acolyte']]},
+    boss:'waxsaint',gifts:['wax','candle','coffee','branch'],perk:{calm:1},perkTxt:'들어갈 때 진정 앰플 1개'},
+  workshop:{name:'멈춘 시계 공방',sin:'sloth',text:'톱니 인형이 지키는 공방. 단단하고 한 방이 묵직한 적이 많다.',
+    enc:{easy:[['gearling','gearling'],['gearling','shard']],hard:[['gearling','gearling','shard'],['clock']],elite:[['clock','gearling'],['clock','shard']]},
+    boss:'clockboss',gifts:['gear','spring','glasses','umbrella'],perk:{rare:2},perkTxt:'카드 보상 희귀 확률 2배'},
+  mirror:{name:'깨진 거울의 방',sin:'pride',text:'끝없이 갈라지는 거울 복도. 파편과 메아리가 길을 막는다.',
+    enc:{easy:[['shard','shard','rat'],['shard','candle']],hard:[['shard','shard','candle'],['fixer','shard','shard']],elite:[['clock','shard'],['candle','candle','shard']]},
+    boss:'boss',gifts:['shardg','branch','glasses','seal'],perk:{event:1.8},perkTxt:'사건(?) 칸이 더 자주 나온다'},
+};
+
+const GIFTS={
+  spring:{n:'녹슨 태엽',d:'전투 첫 턴에 에너지 +1.'},
+  thread:{n:'붉은 실타래',d:'전투마다 처음 쓰는 공격 카드가 대상에게 출혈 3을 건다.'},
+  branch:{n:'황금가지 부스러기',d:'전투를 시작할 때마다 수감자 모두 SP +10.'},
+  glasses:{n:'금 간 안경',d:'합에서 이길 때마다 카드 1장을 뽑는다.'},
+  umbrella:{n:'검은 우산',d:'전투 시작 시 수감자 모두 방어도 4.'},
+  coffee:{n:'식은 커피',d:'턴 시작 시 SP가 가장 낮은 수감자 SP +6.'},
+  ledger:{n:'낡은 장부',d:'전투 보상 엔케팔린 +15.'},
+  chalice:{n:'녹슨 성배',d:'적을 처치한 수감자가 체력 4를 회복한다.'},
+  hook:{n:'녹슨 갈고리',d:'출혈이 있는 적을 공격할 때 위력 +2.'},
+  wax:{n:'촛농 등잔',d:'전투 시작 시 적 모두 화상 2.'},
+  gear:{n:'맞물린 톱니',d:'합에서 이긴 수감자는 위력 +1 (전투 동안).'},
+  shardg:{n:'날 선 거울 조각',d:'회피에 성공하면 공격한 적에게 4 피해.'},
+  candle:{n:'성당의 양초',d:'적을 처치하면 수감자 모두 SP +4.'},
+  seal:{n:'피 묻은 인장',d:'카드 보상 후보가 4장이 된다.'},
+};
+const CONS={
+  heal:{n:'회복 앰플',d:'수감자 1명 체력 15 회복.',target:'ally'},
+  calm:{n:'진정 앰플',d:'수감자 1명 SP +25.',target:'ally'},
+  bomb:{n:'압축 엔케팔린',d:'전투 중 적 모두에게 8 피해.',target:'allEnemies',combatOnly:1},
+};
+const NODE_T={
+  combat:{n:'전투',g:'전'},elite:{n:'정예',g:'정'},event:{n:'사건',g:'?'},rest:{n:'휴식',g:'휴'},
+  shop:{n:'상점',g:'상'},supply:{n:'보급',g:'보'},boss:{n:'보스',g:'終'},
+};
+const PRICE={'일반':40,'고급':60,'희귀':90};
+const NEUTRAL=Object.keys(CARDS).filter(k=>CARDS[k].neutral);
+
+/* =========================================================
+   3. 상태
+   ========================================================= */
+let S=null;      // 원정(런) 상태 — 저장 대상
+let C=null;      // 전투 상태 — 저장하지 않음
+const UI={sel:null,selUnit:null,cons:null,toastT:0};
+let FAST=false;                 // 자동 테스트용: 연출과 대기를 모두 건너뜀
+const A={speed:REDUCED?2:1,skip:false};   // 연출 속도: 1 보통, 2 빠름, 0 끔
+try{ const v=localStorage.getItem('md-speed'); if(v!=null&&['0','1','2'].includes(v)) A.speed=+v; }catch(e){}
+const SPEED_NAME={0:'끔',1:'보통',2:'빠름'};
+const T=ms=>(FAST||A.speed===0||A.skip)?Promise.resolve():sleep(ms/A.speed);
+
+// 코인·합 연출 패널. #app 밖에 있어서 render()에 지워지지 않는다.
+const Stage={
+  el:null, cfg:{},
+  on(){ return !FAST&&A.speed>0&&!A.skip&&!!this.el; },
+  open(html){ this.el.innerHTML=`<div class="stg">${html}<div class="stg-skip">누르면 연출을 건너뛴다</div></div>`; this.el.hidden=false; },
+  close(){ if(!this.el) return; this.el.hidden=true; this.el.innerHTML=''; this.cfg={}; },
+  side(key,o){
+    this.cfg[key]=o;
+    return `<div class="dside ${o.ally?'ally':'foe'}" data-side="${key}" style="--sin:${o.sin||'var(--brass)'}">
+      <div class="dname">${o.name}</div><div class="dskill">${o.skill}</div>
+      <div class="dtotal num" data-total>${o.revealed?o.revealed.total:o.base}</div>
+      <div class="dcoins">${Array.from({length:o.coins},(_,i)=>`<span class="c3${o.revealed?(o.revealed.heads[i]?' h':' t'):''}" data-cp="+${o.cp}"></span>`).join('')}</div>
+      <div class="dsub">기본 ${o.base} · 코인 ${o.coins}개 × ${o.cp} · 앞면 ${o.chance}%</div></div>`;
+  },
+  async flip(key,r){
+    const sd=this.el&&this.el.querySelector(`[data-side="${key}"]`); const o=this.cfg[key]; if(!sd||!o) return;
+    const coins=[...sd.querySelectorAll('.c3:not(.gone)')];
+    coins.forEach(c=>{c.classList.remove('h','t','toss');});
+    const tot=sd.querySelector('[data-total]'); let t=o.base; tot.textContent=t;
+    for(let i=0;i<r.heads.length;i++){
+      const c=coins[i]; if(!c) break;
+      c.classList.add('toss'); await T(300);
+      if(!this.el.contains(c)) return;
+      c.classList.remove('toss'); c.classList.add(r.heads[i]?'h':'t');
+      if(r.heads[i]){ t+=o.cp; tot.textContent=t; tot.classList.remove('bump'); void tot.offsetWidth; tot.classList.add('bump'); }
+      await T(130);
+    }
+  },
+  verdict(txt,cls=''){ const v=this.el&&this.el.querySelector('[data-v]'); if(v){ v.className='verdict '+cls; v.innerHTML=txt; } },
+  async single(o){
+    if(!this.on()) return;
+    this.open(`<div class="stg-head">${o.head}</div><div class="duel single">${this.side('S',o)}</div><div class="verdict" data-v></div>`);
+    await T(260); await this.flip('S',o.roll); await T(260);
+  },
+  async duelOpen(Lo,Ro){
+    if(!this.on()) return;
+    this.open(`<div class="stg-head">합</div><div class="duel">${this.side('L',Lo)}<div class="vsx"><b>VS</b><span data-round>준비</span></div>${this.side('R',Ro)}</div><div class="verdict" data-v>코인을 던져 위력이 낮은 쪽이 코인 1개를 잃는다</div>`);
+    await T(450);
+  },
+  async duelRound(n,pr,er,res){
+    if(!this.on()) return;
+    const rl=this.el.querySelector('[data-round]'); if(rl) rl.textContent=`${n}합`;
+    const L=this.el.querySelector('[data-side="L"]'), R=this.el.querySelector('[data-side="R"]');
+    L.classList.remove('rwin','rlose'); R.classList.remove('rwin','rlose');
+    await Promise.all([this.flip('L',pr),this.flip('R',er)]);
+    await T(160);
+    if(res===0){ this.verdict('같은 위력 · 다시 던진다'); await T(420); return; }
+    const win=res>0?L:R, lose=res>0?R:L;
+    win.classList.add('rwin'); lose.classList.add('rlose');
+    const left=[...lose.querySelectorAll('.c3:not(.gone)')]; const last=left[left.length-1];
+    if(last) last.classList.add('gone');
+    this.verdict(`${res>0?this.cfg.L.name:this.cfg.R.name} 우세 · 상대 코인 1개 파괴`);
+    await T(560);
+  },
+  async duelFinal(key,r,txt,cls){
+    if(!this.on()) return;
+    const W=this.el.querySelector(`[data-side="${key}"]`), Lz=this.el.querySelector(`[data-side="${key==='L'?'R':'L'}"]`);
+    W.classList.remove('rlose'); W.classList.add('win'); Lz.classList.remove('rwin'); Lz.classList.add('lose');
+    this.verdict(txt,cls); await T(520);
+    this.verdict(`${this.cfg[key].name}의 일격 · 남은 코인으로 공격`,cls);
+    await this.flip(key,r); await T(240);
+  },
+  async defend(sid,stc,sr,e,it,r,ok){
+    if(!this.on()) return;
+    const ev=stc.kind==='evade';
+    this.open(`<div class="stg-head">${sname(sid)} · ${ev?'회피':'수비'}</div><div class="duel">${this.side('L',{name:sname(sid),skill:`${ev?'회피':'수비'} · ${stc.name}`,base:stc.base,coins:stc.coins,cp:stc.cp,chance:chance(sid),ally:true,sin:`var(--sin-${SINNERS[sid].sin})`})}<div class="vsx"><b>${ev?'회피':'수비'}</b><span>vs</span></div>${this.side('R',{name:e.name,skill:it.name,base:it.base+(e.power||0),coins:it.coins,cp:it.cp,chance:50,revealed:r,sin:`var(--sin-${ENEMIES[e.id].sin})`})}</div><div class="verdict" data-v>${ev?'공격 위력보다 같거나 높으면 피한다':'굴린 수치만큼 피해를 줄인다'}</div>`);
+    await T(320); await this.flip('L',sr); await T(180);
+    const Ls=this.el.querySelector('[data-side="L"]'), Rs=this.el.querySelector('[data-side="R"]');
+    if(ev){ (ok?Ls:Rs).classList.add('win'); (ok?Rs:Ls).classList.add('lose'); this.verdict(ok?`회피 성공! ${sr.total} ≥ ${r.total}`:`회피 실패 · ${sr.total} < ${r.total}`,ok?'winv':'losev'); }
+    else { Ls.classList.add('win'); this.verdict(`수비 · 위력 ${Math.min(sr.total,r.total)} 막음`,'winv'); }
+    await T(620);
+  },
+  async check(sid,sinKey,pct,ok){
+    if(!this.on()) return;
+    this.open(`<div class="stg-head">판정 · ${SINS[sinKey]}</div><div class="duel single"><div class="dside ally" data-side="S" style="--sin:var(--sin-${sinKey})"><div class="dname">${sname(sid)}</div><div class="dskill">성공 확률</div><div class="dtotal num">${pct}%</div><div class="dcoins"><span class="c3 big chk" data-cp="성공"></span></div></div></div><div class="verdict" data-v>코인이 앞면이면 성공</div>`);
+    const c=this.el.querySelector('.c3'); await T(300);
+    for(let i=0;i<3;i++){ c.classList.remove('h','t'); c.classList.add('toss'); await T(300); c.classList.remove('toss'); c.classList.add(i%2?'h':'t'); await T(110); }
+    c.classList.remove('h','t'); c.classList.add('toss'); await T(360); c.classList.remove('toss'); c.classList.add(ok?'h':'t');
+    this.verdict(ok?'판정 성공!':'판정 실패…',ok?'winv':'losev'); await T(800);
+  },
+  async notice(head,txt){
+    if(!this.on()) return;
+    this.open(`<div class="stg-head">${head}</div><div class="verdict big">${txt}</div>`);
+    await T(720);
+  },
+};
+
+function save(){
+  if(!S) return;
+  try{ if(S.screen==='result') localStorage.removeItem(SAVE_KEY); else localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){}
+}
+function loadSave(){
+  try{ const t=localStorage.getItem(SAVE_KEY); if(!t) return null; const o=JSON.parse(t); return (o&&o.v===2&&(o.map||o.screen==='pack'))?o:null; }catch(e){ return null; }
+}
+function clearSave(){ try{localStorage.removeItem(SAVE_KEY)}catch(e){} }
+
+/* =========================================================
+   4. 카드 규칙
+   ========================================================= */
+function cdef(inst){
+  const base=CARDS[inst.id]; if(!base) return null;
+  const fx=JSON.parse(JSON.stringify(base.fx));
+  let cost=base.cost;
+  if(inst.up){ if(base.up) base.up(fx); if(base.upCost!=null) cost=base.upCost; }
+  return {...base, id:inst.id, fx, cost, up:!!inst.up, name:base.name+(inst.up?'+':'')};
+}
+const canUpgrade=inst=>!inst.up && CARDS[inst.id] && (CARDS[inst.id].up||CARDS[inst.id].upCost!=null);
+const mkCard=(id,up=false)=>({u:uid(),id,up});
+
+function fxLine(f,d){
+  const tgtWord=d.target==='ally'?'대상 아군':d.target==='allAllies'?'아군 모두':d.target==='self'?'자신':d.target==='allEnemies'?'적 모두':'대상';
+  const who=f.to==='self'?'자신':f.to==='allAllies'?'아군 모두':f.to==='allEnemies'?'적 모두':tgtWord;
+  switch(f.t){
+    case 'atk':{
+      let s=`<em>위력 ${f.base} + 코인 ${f.coinsX?`(X+${f.coins})`:f.coins}개×${f.cp}</em>`;
+      if(f.timesX) s+=` <em>X번</em>`; else if(f.times>1) s+=` <em>${f.times}번</em>`;
+      if(d.target==='allEnemies') s=`${posTxt(d.tpos)} 적 모두에게 `+s;
+      if(f.spScale) s+=`<br>SP가 음수면 5당 위력 +1`;
+      if(f.per) s+=`<br>대상의 ${STATUS[f.per.s].n} 1당 위력 +${f.per.n}`;
+      return s;}
+    case 'block': return `${who} 방어도 <em>${f.n}</em>`;
+    case 'stance': return f.k==='evade'
+      ? `<em>회피 ${f.base} + 코인 ${f.coins}개×${f.cp}</em><br>이번 라운드 공격을 받으면 위력을 겨룬다. 같거나 높으면 피해 0, 다음 공격도 계속 회피`
+      : `<em>수비 ${f.base} + 코인 ${f.coins}개×${f.cp}</em><br>이번 라운드 처음 받는 공격의 피해를 굴린 수치만큼 줄인다`;
+    case 'heal': return `${who} 체력 <em>${f.n}</em> 회복`;
+    case 'draw': return `카드 <em>${f.n}</em>장 뽑기`;
+    case 'energy': return `에너지 <em>+${f.n}</em>`;
+    case 'sp': return `${f.to?who:(d.target==='self'?'자신':who)} SP <em>${f.n>0?'+':''}${f.n}</em>`;
+    case 'status': return `${f.to==='self'?'자신에게':(d.target==='allEnemies'?'적 모두에게':'대상에게')} ${STATUS[f.s].n} <em>${f.n}</em>`;
+    case 'power': return `${f.to?who:'자신'} 위력 <em>+${f.n}</em> (전투 동안)`;
+    case 'guard': return `대상 아군을 <em>엄호</em>: 이번 라운드 그 아군을 노린 공격을 대신 받는다`;
+    case 'move': return f.to===1?`<em>1열로 이동</em>한 뒤`:`앞으로 <em>1칸 이동</em>`;
+    case 'selfdmg': return `자신 체력 -${f.n}`;
+    case 'cleanse': return `출혈·화상 제거`;
+    case 'dmg': return `${d.target==='allEnemies'?'적 모두에게':'대상에게'} 피해 <em>${f.n}</em> (코인 없음)`;
+    case 'aura': return auraText(f.k,f.n);
+  }
+  return '';
+}
+function auraText(k,n){
+  return {drawEach:`매 턴 카드 <em>${n}</em>장 더 뽑기`,powerEach:`매 턴 시작 시 자신 위력 <em>+${n}</em>`,regenAll:`매 턴 시작 시 아군 모두 체력 <em>${n}</em> 회복`,
+    frontBlock:`매 턴 시작 시 1열 수감자 방어도 <em>${n}</em>`,weakAura:`매 턴 시작 시 적 모두 약화 <em>${n}</em>`,
+    rageOnHit:`자신이 피해를 받을 때마다 위력 <em>+${n}</em>`,counterBleed:`수감자가 공격받아 피해를 입으면 공격한 적에게 출혈 <em>${n}</em>`}[k]||'';
+}
+const KEYWORDS={innate:['선천성','전투 첫 손패에 반드시 들어온다.'],retain:['보존','턴이 끝나도 버려지지 않고 손에 남는다.'],ethereal:['휘발','턴이 끝날 때 손에 있으면 소멸한다.'],exhaust:['소멸','쓰면 이번 전투에서 사라진다.']};
+function descHTML(d){
+  const kw=['innate','retain','ethereal'].filter(k=>d[k]).map(k=>`<em>${KEYWORDS[k][0]}</em>`);
+  const lines=kw.length?[kw.join(' · ')]:[];
+  if(d.type==='파워') lines.push('<em>파워</em>: 이번 전투 동안 유지');
+  lines.push(...d.fx.map(f=>fxLine(f,d)).filter(Boolean));
+  if(d.note) lines.push(d.note);
+  if(d.exhaust) lines.push('<em>소멸</em>');
+  return lines.map(l=>`<span>${l}</span>`).join('');
+}
+function posLine(d){
+  if(!d.owner) return d.neutral?'무색 · 누구나 사용':d.type;
+  let s=`사용 ${posTxt(d.from)}`;
+  if(d.target==='enemy') s+=` · 대상 적 ${posTxt(d.tpos)}`;
+  return s;
+}
+
+/* =========================================================
+   5. 지도 생성
+   ========================================================= */
+const ROWS=7, COLS=4;
+function genMap(pack){
+  const evW=Math.round(22*((pack&&pack.perk.event)||1));
+  const nodes={}, edges=[];
+  const node=(r,c)=>{const id=`${r}-${c}`; if(!nodes[id]) nodes[id]={id,r,c,type:null,next:[]}; return nodes[id];};
+  const crosses=(r,a,b)=>edges.some(([r0,x,y])=>r0===r&&((x<a&&y>b)||(x>a&&y<b)));
+  const starts=shuffle([0,1,2,3]).slice(0,3); starts.push(ri(0,COLS-1));
+  for(const s of starts){
+    let c=s; node(0,c);
+    for(let r=0;r<ROWS-1;r++){
+      const opts=shuffle([c-1,c,c+1].filter(x=>x>=0&&x<COLS));
+      const nc=opts.find(x=>!crosses(r,c,x)) ?? c;
+      if(!edges.some(e=>e[0]===r&&e[1]===c&&e[2]===nc)) edges.push([r,c,nc]);
+      node(r+1,nc); c=nc;
+    }
+  }
+  for(const [r,a,b] of edges){ const n=nodes[`${r}-${a}`]; const id=`${r+1}-${b}`; if(!n.next.includes(id)) n.next.push(id); }
+  nodes.B={id:'B',r:ROWS,c:1.5,type:'boss',next:[]};
+  Object.values(nodes).forEach(n=>{ if(n.r===ROWS-1) n.next=['B']; });
+  // 종류 배정
+  const parents=id=>Object.values(nodes).filter(n=>n.next.includes(id));
+  const roll=r=>{
+    const bag=[['combat',45],['event',evW],['supply',6]];
+    if(r>=2){bag.push(['elite',11]);bag.push(['shop',8]);}
+    if(r>=2&&r<=4) bag.push(['rest',9]);
+    let t=rnd()*bag.reduce((a,b)=>a+b[1],0);
+    for(const [k,w] of bag){ if((t-=w)<0) return k; } return 'combat';
+  };
+  const ordered=Object.values(nodes).filter(n=>n.id!=='B').sort((a,b)=>a.r-b.r);
+  for(const n of ordered){
+    if(n.r===0){n.type='combat';continue;}
+    if(n.r===ROWS-1){n.type='rest';continue;}
+    let t, tries=0;
+    do{ t=roll(n.r); tries++; } while(tries<8 && ['elite','rest','shop'].includes(t) && parents(n.id).some(p=>p.type===t));
+    n.type=t;
+  }
+  const force=(type)=>{
+    if(ordered.some(n=>n.type===type)) return;
+    const cand=ordered.filter(n=>n.r>=2&&n.r<=5&&n.type==='combat');
+    if(cand.length) pick(cand).type=type;
+  };
+  force('elite'); force('shop');
+  return {nodes};
+}
+function reachable(){
+  if(!S) return [];
+  if(!S.cur) return Object.values(S.map.nodes).filter(n=>n.r===0).map(n=>n.id);
+  if(!S.visited.includes(S.cur)) return [];
+  return S.map.nodes[S.cur].next.slice();
+}
+
+/* =========================================================
+   6. 원정 시작·노드 진행
+   ========================================================= */
+function newRun(formation){
+  const party={};
+  for(const id of formation){ const d=SINNERS[id]; party[id]={id,hp:d.hp,max:d.hp,sp:spRule(id).start,down:false,gone:false}; }
+  const deck=[];
+  for(const id of formation) for(const [cid,c] of Object.entries(CARDS)) if(c.owner===id) for(let k=0;k<(c.starter||0);k++) deck.push(mkCard(cid));
+  S={v:2,screen:'pack',party,formation:formation.slice(),deck,gifts:[],cons:['heal'],enk:60,clocks:2,
+     floor:1,pack:null,usedPacks:[],packChoices:null,floorMsg:'',
+     map:null,cur:null,visited:[],seenEvents:[],stats:{kills:0,nodes:0,turns:0},reward:null,event:null,rest:null,shop:null,supply:null};
+  S.packChoices=rollPacks();
+  save();
+}
+function rollPacks(){
+  const left=Object.keys(PACKS).filter(k=>!S.usedPacks.includes(k));
+  const src=left.length>=3?left:Object.keys(PACKS);
+  return shuffle(src.slice()).slice(0,3);
+}
+function choosePack(id){
+  if(!S||S.screen!=='pack'||!S.packChoices.includes(id)) return;
+  S.pack=id; S.usedPacks.push(id);
+  S.map=genMap(PACKS[id]); S.cur=null; S.visited=[]; S.floorMsg='';
+  if(PACKS[id].perk.calm&&S.cons.length<3) S.cons.push('calm');
+  S.screen='map'; save(); render();
+}
+function nextFloor(){
+  S.floor++;
+  S.formation.forEach(sid=>{ const p=S.party[sid]; p.hp=Math.min(p.max,p.hp+Math.ceil(p.max*.35)); });
+  S.floorMsg=`${S.floor-1}층 돌파. 수감자 모두 체력을 35% 회복했다.`;
+  S.pack=null; S.map=null; S.cur=null; S.visited=[];
+  S.packChoices=rollPacks(); S.screen='pack';
+  save(); render();
+}
+const pack=()=>PACKS[S.pack];
+const MIN_DECK_=10;
+const activeDeck=()=>S.deck.filter(c=>!c.off);
+const minDeck=()=>Math.min(MIN_DECK_,S.deck.length);   // 카드가 원래 적으면 가진 만큼만 요구
+const alive=()=>S.formation.slice();
+const has=g=>S.gifts.includes(g);
+const L=(html,cls='')=>{ if(C){ C.log.push({html,cls}); if(C.log.length>140) C.log.shift(); } };
+
+function enterNode(id){
+  if(!reachable().includes(id)) return;
+  const n=S.map.nodes[id];
+  UI.sel=null; UI.selUnit=null; UI.cons=null;
+  if(n.type==='combat'||n.type==='elite'||n.type==='boss'){ S.prep={node:id}; S.screen='prep'; save(); render(); return; }
+  S.cur=id; S.stats.nodes++;
+  if(n.type==='event'){ S.event={id:pickEvent(),result:null,picking:null}; S.screen='event'; save(); }
+  else if(n.type==='rest'){ S.rest={done:null,picking:false}; S.screen='rest'; save(); }
+  else if(n.type==='shop'){ S.shop=genShop(); S.screen='shop'; save(); }
+  else if(n.type==='supply'){ S.supply=doSupply(); S.screen='supply'; save(); }
+  render();
+}
+function startPrepared(){
+  const id=S.prep&&S.prep.node; if(!id||!reachable().includes(id)) return;
+  if(activeDeck().length<minDeck()){ toast(`가져갈 카드가 ${minDeck()}장 이상이어야 한다`); return; }
+  S.cur=id; S.stats.nodes++; S.prep=null; S.screen='combat'; save();
+  startCombat(S.map.nodes[id]); render();
+}
+function completeNode(){
+  if(!S.visited.includes(S.cur)) S.visited.push(S.cur);
+  if(S.map.nodes[S.cur]&&S.map.nodes[S.cur].type==='boss'){ S.reward=null; UI.sel=UI.selUnit=UI.cons=null; nextFloor(); return; }
+  S.screen='map'; S.reward=S.event=S.rest=S.shop=S.supply=null;
+  UI.sel=UI.selUnit=UI.cons=null;
+  save(); render();
+}
+function endRun(win){
+  S.screen='result'; S.result={win};
+  C=null; save(); render();
+}
+
+/* =========================================================
+   7. 전투 규칙
+   ========================================================= */
+const chance=sid=>clamp(50+S.party[sid].sp,5,95);
+function roll(base,coins,cp,ch){
+  const heads=[]; let total=base;
+  for(let i=0;i<coins;i++){ const h=rnd()*100<ch; heads.push(h); if(h) total+=cp; }
+  return {heads,total:Math.max(0,total)};
+}
+const coinHTML=r=>r.heads.map(h=>`<span class="coin${h?' h':''}"></span>`).join('');
+const sname=sid=>SINNERS[sid].name;
+const spRule=sid=>({...SP_RULE,...(SINNERS[sid].sp||{})});
+const spRuleTxt=sid=>{ const r=spRule(sid); const t=[`합 승리 +${r.clashWin}`,`적 처치 +${r.kill}`,`동료가 쓰러짐 ${r.allyDown}`]; if(r.clashLose) t.push(`합 패배 ${r.clashLose}`); if(r.lossMul!==1) t.push(`잃는 SP ×${r.lossMul}`); return t.join(' · '); };
+const spTier=sp=>sp<=SP_MIN?'패닉 직전':sp<=-25?'동요':sp>=25?'고양':'평정';
+
+function mkEnemy(id){
+  const D=ENEMIES[id]; const lv=Math.max(0,(S.floor||1)-1);
+  const hp=Math.round(ri(D.hp[0],D.hp[1])*(1+.2*lv));   // 층마다 체력 +20%, 3층부터 위력 +1
+  return {uid:uid(),id,name:D.name,hp,max:hp,block:0,st:{},power:lv>=2?1:0,stag:D.stag.slice(),staggered:false,intent:null,mi:0,phase:0};
+}
+function startCombat(node){
+  const kind=node.type==='boss'?'boss':node.type==='elite'?'elite':(node.r<=1?'easy':'hard');
+  const ids=kind==='boss'?[pack().boss]:pick(pack().enc[kind]);
+  const draw=shuffle(S.deck.filter(c=>{const o=CARDS[c.id].owner; return !c.off&&(!o||S.formation.includes(o));}).map(c=>({...c})));
+  draw.sort((a,b)=>(CARDS[a.id].innate?1:0)-(CARDS[b.id].innate?1:0));   // 선천성 카드는 맨 위(먼저 뽑힘)
+  C={kind,enemies:ids.map(mkEnemy),u:{},auras:[],draw,hand:[],disc:[],exh:[],locked:[],energy:0,round:1,busy:false,over:null,finished:false,
+     log:[],firstAtk:false,clashBonus:false,fx:{}};
+  for(const sid of S.formation){
+    C.u[sid]={block:0,st:{},guardBy:null,panic:false};
+    const p=S.party[sid];
+    if(has('branch')) p.sp=clamp(p.sp+10,SP_MIN,SP_MAX);   // SP는 전투가 끝나도 유지된다
+  }
+  if(has('wax')) C.enemies.forEach(e=>{e.st.burn=(e.st.burn||0)+2;});
+  L(`<b>${C.enemies.map(e=>e.name).join(', ')}</b> 등장`,'lt');
+  startPlayerTurn(true);
+}
+function addFx(id,kind,n){ C.fx[id]={kind,n,t:Date.now()}; }
+
+function drawCards(n){
+  let got=0, guard=0;
+  while(got<n && guard++<60){
+    if(C.hand.length>=10){ L('손패가 가득 차서 더 뽑지 못했다.'); break; }
+    if(!C.draw.length){
+      if(!C.disc.length) break;
+      C.draw=shuffle(C.disc); C.disc=[]; L('버림 더미를 섞어 다시 뽑을 더미로 만들었다.','lt');
+    }
+    const c=C.draw.pop(); const o=CARDS[c.id].owner;
+    if(o && !S.formation.includes(o)){ C.locked.push(c); continue; }
+    C.hand.push(c); got++;
+  }
+}
+function pickTarget(rule){
+  const f=S.formation; if(!f.length) return null;
+  if(rule==='front') return pick(f.slice(0,2));
+  if(rule==='back') return f.length>2?pick(f.slice(2)):pick(f);
+  if(rule==='lowSp') return f.slice().sort((a,b)=>S.party[a].sp-S.party[b].sp)[0];
+  return pick(f);
+}
+function chooseIntent(e){
+  const D=ENEMIES[e.id];
+  if(e.staggered){ e.intent={type:'stagger',name:'흐트러짐',cancelled:false,used:false}; return; }
+  const moves=D.phases?D.phases[e.phase]:D.moves;
+  let m=moves[e.mi%moves.length]; e.mi++;
+  if(m.type==='summon'&&C.enemies.length>=4){ m=moves[e.mi%moves.length]; e.mi++; }
+  const it=JSON.parse(JSON.stringify(m)); it.cancelled=false; it.used=false;
+  if(['atk','debuff','stress'].includes(m.type)&&m.tgt!=='all') it.target=pickTarget(m.tgt);
+  e.intent=it;
+}
+function resolvedTarget(e){
+  const it=e.intent; if(!it||it.tgt==='all') return null;
+  if(!it.target||!S.formation.includes(it.target)) it.target=pickTarget(it.tgt||'any');
+  let t=it.target;
+  const g=t&&C.u[t]&&C.u[t].guardBy;
+  if(g&&S.formation.includes(g)) t=g;
+  return t;
+}
+function intentText(e){
+  const it=e.intent; if(!it) return {cls:'',html:'…'};
+  if(it.type==='stagger') return {cls:'cancel',html:`<span class="in-name">흐트러짐</span><br>이번 라운드 행동 불가`};
+  const tg=it.tgt==='all'?'수감자 모두':(resolvedTarget(e)?sname(resolvedTarget(e)):'—');
+  const pw=e.power||0;
+  let h=`<span class="in-name">${it.name}</span><br>`, cls='';
+  if(it.type==='atk'){ cls='atk'; h+=`공격 <b class="num">${it.base+pw}~${it.base+pw+it.coins*it.cp}</b> → ${tg}`; if(it.st) h+=` · ${STATUS[it.st.s].n} ${it.st.n}`; }
+  else if(it.type==='stress'){ cls='stress'; h+=`SP <b class="num">-${it.sp}</b> → ${tg}`; }
+  else if(it.type==='block'){ h+=`방어도 ${it.block}${it.power?` · 위력 +${it.power}`:''}`; }
+  else if(it.type==='buff'){ h+=`적 모두 위력 +${it.power}`; }
+  else if(it.type==='debuff'){ h+=`${STATUS[it.st.s].n} ${it.st.n} → ${tg}`; }
+  else if(it.type==='push'){ h+=`진형을 뒤집고 덱에 균열 ${it.cards}장`; }
+  else if(it.type==='summon'){ h+=`${ENEMIES[it.unit||'shard'].name} ${it.n}명 소환`; }
+  if(it.cancelled) cls+=' cancel';
+  return {cls,html:h};
+}
+
+function canClash(e,sid){
+  const it=e.intent;
+  return !!(it&&it.type==='atk'&&!it.cancelled&&!it.used&&!e.staggered&&it.tgt!=='all'&&S.formation.includes(sid));
+}
+function atkBonus(sid,f,e){
+  let b=C.u[sid].st.power||0; const sp=S.party[sid].sp;
+  if(sid==='heath'&&sp<0) b+=2;
+  if(f.spScale&&sp<0) b+=Math.floor(-sp/5);
+  if(f.per&&e) b+=(e.st[f.per.s]||0)*f.per.n;
+  if(has('hook')&&e&&(e.st.bleed||0)>0) b+=2;
+  return b;
+}
+function outMod(n,attSt,tgtSt,stag){
+  let m=n; if((attSt.weak||0)>0) m*=0.75; if((tgtSt.vuln||0)>0) m*=1.5; if(stag) m*=1.5; return Math.floor(m);
+}
+function spChange(sid,n){
+  const p=S.party[sid]; if(!p||p.down||p.gone) return;
+  if(n<0) n=Math.trunc(n*spRule(sid).lossMul);
+  p.sp=clamp(p.sp+n,SP_MIN,SP_MAX);
+}
+function bleedTick(st,onDmg){
+  const b=st.bleed||0; if(b<=0) return false;
+  st.bleed=b-1; onDmg(b); return true;
+}
+
+function dealToEnemy(e,dmg,src){
+  if(!C.enemies.includes(e)) return;
+  let d=dmg; const blk=Math.min(e.block,d); e.block-=blk; d-=blk;
+  e.hp-=d; addFx(e.uid,'hit',dmg);
+  if(e.hp<=0){ killEnemy(e,src); return; }
+  const D=ENEMIES[e.id];
+  if(D.boss){ const r=e.hp/e.max, ph=r<=.33?2:r<=.66?1:0; if(ph>e.phase){ e.phase=ph; e.mi=0; L(`${e.name}의 모습이 일그러진다. (${ph+1}단계)`,'ls'); } }
+  while(e.stag.length&&e.hp<=e.max*e.stag[0]){
+    e.stag.shift();
+    if(!e.staggered){ e.staggered=true; if(e.intent) e.intent.cancelled=true; L(`${e.name} <b>흐트러짐</b>: 행동 취소, 받는 피해 +50%`,'lc'); }
+  }
+}
+function killEnemy(e,src){
+  C.enemies=C.enemies.filter(x=>x!==e); S.stats.kills++;
+  L(`${e.name} 처치`,'lc');
+  if(has('candle')) S.formation.forEach(s=>spChange(s,4));
+  if(src&&S.formation.includes(src)){ spChange(src,spRule(src).kill); if(has('chalice')) healSinner(src,4); }
+  checkEnd();
+}
+function healSinner(sid,n){
+  const p=S.party[sid]; if(!p||p.down) return; const before=p.hp; p.hp=Math.min(p.max,p.hp+n); if(C&&p.hp>before) addFx(sid,'heal',p.hp-before);
+}
+function dealToSinner(sid,dmg,ignoreBlock=false){
+  if(!S.formation.includes(sid)) return;
+  const u=C.u[sid], p=S.party[sid];
+  let d=dmg;
+  if(!ignoreBlock){ const blk=Math.min(u.block,d); u.block-=blk; d-=blk; }
+  p.hp-=d; addFx(sid,'hit',dmg);
+  if(d>0) for(const a of C.auras) if(a.k==='rageOnHit'&&a.owner===sid) u.st.power=(u.st.power||0)+a.n;
+  if(p.hp<=0) sinnerDown(sid);
+}
+function sinnerDown(sid){
+  const p=S.party[sid]; p.hp=0; p.down=true;
+  S.formation=S.formation.filter(x=>x!==sid);
+  L(`<b>${sname(sid)}</b> 전투 불능. 뒤에 있던 수감자가 앞으로 당겨진다.`,'lb');
+  for(const o of S.formation) spChange(o,spRule(o).allyDown);
+  for(const pile of ['hand','draw','disc']){
+    const keep=[]; for(const c of C[pile]){ if(CARDS[c.id].owner===sid) C.locked.push(c); else keep.push(c); } C[pile]=keep;
+  }
+  if(UI.selUnit===sid) UI.selUnit=null;
+  checkEnd();
+}
+function checkEnd(){
+  if(C.over) return;
+  if(!C.enemies.length) C.over='win';
+  else if(!S.formation.length) C.over='lose';
+  if(C.over){ UI.sel=null; UI.cons=null; }
+}
+function maybeFinish(){
+  if(C&&C.over&&!C.finishQueued){ C.finishQueued=true; setTimeout(finishCombat, FAST?0:Math.round(650/(A.speed||2))); }
+}
+
+function startPlayerTurn(first=false){
+  for(const sid of S.formation){ C.u[sid].block=0; C.u[sid].stance=null; }
+  if(first){
+    if(S.formation.includes('outis')) C.u.outis.block+=6;
+    if(has('umbrella')) S.formation.forEach(s=>C.u[s].block+=4);
+  }
+  if(has('coffee')&&S.formation.length){ const low=S.formation.slice().sort((a,b)=>S.party[a].sp-S.party[b].sp)[0]; spChange(low,6); }
+  for(const sid of S.formation){
+    if(S.party[sid].sp<=SP_MIN){ C.u[sid].panic=true; L(`<b>${sname(sid)}</b> 패닉! 이번 턴 그 수감자의 카드를 쓸 수 없다.`,'ls'); }
+  }
+  let extraDraw=0;
+  if(!first) for(const a of C.auras){
+    if(a.owner&&!S.formation.includes(a.owner)) continue;
+    if(a.k==='drawEach') extraDraw+=a.n;
+    else if(a.k==='powerEach') C.u[a.owner].st.power=(C.u[a.owner].st.power||0)+a.n;
+    else if(a.k==='regenAll') S.formation.forEach(s=>healSinner(s,a.n));
+    else if(a.k==='frontBlock'&&S.formation[0]) C.u[S.formation[0]].block+=a.n;
+    else if(a.k==='weakAura') C.enemies.forEach(e=>{e.st.weak=(e.st.weak||0)+a.n;});
+  }
+  C.energy=3+(first&&has('spring')?1:0);
+  C.clashBonus=false;
+  drawCards(5+extraDraw+(first&&S.formation.includes('faust')?1:0));
+  for(const e of C.enemies) chooseIntent(e);
+  L(`— 라운드 ${C.round} —`,'lt');
+}
+
+function canPlay(inst){
+  const d=cdef(inst); if(!d) return {ok:false,why:'오류'};
+  if(d.unplayable) return {ok:false,why:'사용 불가'};
+  if(d.owner){
+    if(!S.formation.includes(d.owner)) return {ok:false,why:'전투 불능'};
+    if(C.u[d.owner].panic) return {ok:false,why:'패닉'};
+    const pos=S.formation.indexOf(d.owner)+1;
+    if(!d.from.includes(pos)) return {ok:false,why:`${pos}열에선 불가`};
+  }
+  if(d.cost!=='X'&&C.energy<d.cost) return {ok:false,why:'에너지 부족'};
+  if(d.target==='enemy'&&!validEnemies(d).length) return {ok:false,why:'닿는 적 없음'};
+  if(d.target==='allEnemies'&&!validEnemies(d).length) return {ok:false,why:'닿는 적 없음'};
+  if(d.target==='ally'&&!validAllies(d).length) return {ok:false,why:'대상 없음'};
+  return {ok:true};
+}
+const validEnemies=d=>C.enemies.filter((e,i)=>!d.tpos||d.tpos.includes(i+1));
+const validAllies=d=>S.formation.filter(s=>!(d.noSelf&&s===d.owner));
+
+async function playCard(u,targetId){
+  if(!C||C.busy||C.over) return false;
+  const inst=C.hand.find(c=>c.u===u); if(!inst) return false;
+  const chk=canPlay(inst); if(!chk.ok){ toast(chk.why); return false; }
+  const d=cdef(inst);
+  let tgtE=null, tgtA=null;
+  if(d.target==='enemy'){ tgtE=validEnemies(d).find(e=>e.uid===targetId); if(!tgtE) return false; }
+  if(d.target==='ally'){ if(!validAllies(d).includes(targetId)) return false; tgtA=targetId; }
+  // 비용 지불 → 손에서 빼기 → 효과
+  const X=d.cost==='X'?C.energy:0;
+  C.energy-=d.cost==='X'?X:d.cost;
+  C.hand=C.hand.filter(c=>c!==inst);
+  (d.exhaust||d.type==='파워'?C.exh:C.disc).push(inst);
+  L(`${d.owner?sname(d.owner)+': ':''}<b>${d.name}</b>`);
+  UI.sel=null; UI.selUnit=null; C.busy=true; A.skip=false;
+  const cc=C; render();
+  try{
+    for(const f of d.fx){
+      if(C!==cc||C.over) break;
+      if(d.owner&&!S.formation.includes(d.owner)) break;
+      await applyFx(f,d,d.owner,tgtE,tgtA,X);
+    }
+  }catch(err){ console.error(err); toast('오류: '+(err.message||err)); }
+  finally{
+    Stage.close();
+    if(C===cc){ C.busy=false; C.actors=null; render(); maybeFinish(); }
+  }
+  return true;
+}
+async function applyFx(f,d,owner,tgtE,tgtA,X=0){
+  const allyTargets=()=>{
+    const to=f.to||(d.target==='ally'?'target':d.target==='allAllies'?'allAllies':'self');
+    if(to==='self') return owner?[owner]:[];
+    if(to==='allAllies') return S.formation.slice();
+    return tgtA?[tgtA]:[];
+  };
+  switch(f.t){
+    case 'atk': await sinnerAttack(owner,f,d,tgtE,X); return;
+    case 'dmg':{ const list=d.target==='allEnemies'?C.enemies.slice():(tgtE&&C.enemies.includes(tgtE)?[tgtE]:[]);
+      C.actors={a:owner,t:list.map(e=>e.uid)}; list.forEach(e=>{ L(`${e.name}에게 ${f.n} 피해`); dealToEnemy(e,f.n,owner); }); render(); await T(380); break; }
+    case 'aura': C.auras.push({k:f.k,n:f.n,owner,name:d.name}); L(`파워 <b>${d.name}</b>: ${auraText(f.k,f.n).replace(/<[^>]+>/g,'')}`,'lc'); break;
+    case 'block': allyTargets().forEach(s=>{C.u[s].block+=f.n; addFx(s,'blk',f.n);}); break;
+    case 'stance': if(owner){ C.u[owner].stance={kind:f.k,base:f.base,coins:f.coins,cp:f.cp,name:d.name}; L(`${sname(owner)}: ${f.k==='evade'?'회피':'수비'} 자세`); } break;
+    case 'heal': allyTargets().forEach(s=>healSinner(s,f.n)); break;
+    case 'draw': drawCards(f.n); break;
+    case 'energy': C.energy+=f.n; break;
+    case 'sp': allyTargets().forEach(s=>spChange(s,f.n)); break;
+    case 'power': allyTargets().forEach(s=>{C.u[s].st.power=(C.u[s].st.power||0)+f.n;}); break;
+    case 'cleanse': allyTargets().forEach(s=>{delete C.u[s].st.bleed; delete C.u[s].st.burn;}); break;
+    case 'guard': if(tgtA){ C.u[tgtA].guardBy=owner; L(`${sname(owner)}이(가) ${sname(tgtA)}을(를) 엄호한다.`); } break;
+    case 'selfdmg': if(owner){ const p=S.party[owner]; p.hp=Math.max(1,p.hp-f.n); addFx(owner,'hit',f.n); } break;
+    case 'move': if(owner){ const i=S.formation.indexOf(owner); const to=f.to?f.to-1:Math.max(0,i+(f.d||0)); moveTo(owner,to); render(); await T(220); } break;
+    case 'status':{
+      const list=d.target==='allEnemies'?C.enemies.slice():(tgtE&&C.enemies.includes(tgtE)?[tgtE]:[]);
+      list.forEach(e=>{e.st[f.s]=(e.st[f.s]||0)+f.n;});
+      break;}
+  }
+}
+function moveTo(sid,idx){
+  const f=S.formation, i=f.indexOf(sid); if(i<0) return;
+  idx=clamp(idx,0,f.length-1); if(i===idx) return;
+  f.splice(i,1); f.splice(idx,0,sid);
+}
+const sinColor=sid=>`var(--sin-${SINNERS[sid].sin})`;
+async function sinnerAttack(sid,f,d,tgtE,X=0){
+  const times=f.timesX?X:(f.times||1);
+  const f2={...f,coins:f.coins+(f.coinsX?X:0)};
+  const cc=C;
+  if(!times) L(`${d.name}: X가 0이라 아무 일도 없었다.`);
+  for(let i=0;i<times;i++){
+    if(C!==cc||C.over||!S.formation.includes(sid)) return;
+    if(d.target==='enemy'&&(!tgtE||!C.enemies.includes(tgtE))) return;
+    await sinnerAttackOnce(sid,f2,d,tgtE);
+  }
+}
+async function sinnerAttackOnce(sid,f,d,tgtE){
+  const u=C.u[sid], cc=C;
+  if(bleedTick(u.st,b=>{ L(`${sname(sid)} 출혈로 ${b} 피해`,'lb'); dealToSinner(sid,b,true); })){ render(); await T(300); if(C!==cc||!S.formation.includes(sid)) return; }
+  const targets=d.target==='allEnemies'?validEnemies(d):(tgtE&&C.enemies.includes(tgtE)?[tgtE]:[]);
+  if(!targets.length) return;
+  const firstAtk=!C.firstAtk; C.firstAtk=true;
+  C.actors={a:sid,t:targets.map(e=>e.uid)}; render();
+  if(targets.length===1&&canClash(targets[0],sid)){
+    const e=targets[0]; const won=await doClash(sid,f,e,d);
+    if(won&&C===cc&&C.enemies.includes(e)) afterHit(sid,e,firstAtk);
+    return;
+  }
+  const r=roll(f.base,f.coins,f.cp,chance(sid));
+  const b0=atkBonus(sid,f,targets[0]);
+  await Stage.single({head:`${sname(sid)} · ${d.name} → ${targets.length>1?'적 '+targets.length+'명':targets[0].name}`,
+    name:sname(sid),skill:d.name,base:f.base+b0,coins:f.coins,cp:f.cp,chance:chance(sid),roll:{...r,total:r.total+b0},ally:true,sin:sinColor(sid)});
+  if(C!==cc) return;
+  const dmgs=[];
+  for(const e of targets){
+    if(!C.enemies.includes(e)) continue;
+    const raw=r.total+atkBonus(sid,f,e);
+    const dmg=outMod(raw,u.st,e.st,e.staggered);
+    L(`${coinHTML(r)} 위력 ${raw} → ${e.name}에게 <b>${dmg}</b> 피해`);
+    dmgs.push(dmg);
+    dealToEnemy(e,dmg,sid);
+    if(C.enemies.includes(e)) afterHit(sid,e,firstAtk);
+  }
+  Stage.verdict(`<b class="num">${dmgs.join(' · ')}</b> 피해`,'hitv');
+  render(); await T(420);
+}
+function afterHit(sid,e,firstAtk){
+  if(sid==='yisang') e.st.weak=(e.st.weak||0)+1;
+  if(firstAtk&&has('thread')){ e.st.bleed=(e.st.bleed||0)+3; L(`붉은 실타래: ${e.name} 출혈 3`); }
+}
+function clashRanges(sid,f,e){
+  const pb=f.base+atkBonus(sid,f,e), eb=e.intent.base+(e.power||0);
+  return {p:[pb,pb+f.coins*f.cp], e:[eb,eb+e.intent.coins*e.intent.cp]};
+}
+async function doClash(sid,f,e,d){
+  const it=e.intent, u=C.u[sid], cc=C;
+  if(bleedTick(e.st,b=>{ L(`${e.name} 출혈로 ${b} 피해`,'lb'); dealToEnemy(e,b,null); })){ render(); await T(300); if(C!==cc||!C.enemies.includes(e)) return false; }
+  const pb=f.base+atkBonus(sid,f,e), eb=it.base+(e.power||0);
+  let pc=f.coins, ec=it.coins, rounds=0;
+  L(`합! ${sname(sid)} vs ${e.name}`,'lc');
+  await Stage.duelOpen(
+    {name:sname(sid),skill:d.name,base:pb,coins:pc,cp:f.cp,chance:chance(sid),ally:true,sin:sinColor(sid)},
+    {name:e.name,skill:it.name,base:eb,coins:ec,cp:it.cp,chance:50,sin:`var(--sin-${ENEMIES[e.id].sin})`});
+  while(pc>0&&ec>0&&rounds<12){
+    if(C!==cc) return false;
+    const pr=roll(pb,pc,f.cp,chance(sid)), er=roll(eb,ec,it.cp,50); rounds++;
+    let res=0, word='무승부';
+    if(pr.total>er.total){ec--;res=1;word='우세';} else if(er.total>pr.total){pc--;res=-1;word='열세';}
+    L(`&nbsp;${coinHTML(pr)} <b>${pr.total}</b> : <b>${er.total}</b> ${coinHTML(er)} · ${word}`);
+    await Stage.duelRound(rounds,pr,er,res);
+  }
+  if(C!==cc) return false;
+  it.used=true;
+  const won=pc>0&&(ec===0||pc>ec);
+  if(won){
+    it.cancelled=true;
+    const r=roll(pb,pc,f.cp,chance(sid));
+    await Stage.duelFinal('L',r,'합 승리!','winv');
+    if(C!==cc) return false;
+    const dmg=outMod(r.total,u.st,e.st,e.staggered);
+    L(`<b>합 승리</b>: 적의 행동 취소. 남은 코인 ${coinHTML(r)}로 <b>${dmg}</b> 피해`,'lg');
+    spChange(sid,spRule(sid).clashWin);
+    if(has('glasses')) drawCards(1);
+    if(has('gear')) C.u[sid].st.power=(C.u[sid].st.power||0)+1;
+    if(sid==='donqui'&&!C.clashBonus){ C.clashBonus=true; C.energy+=1; L('정의의 돌격: 에너지 +1','lg'); }
+    dealToEnemy(e,dmg,sid);
+    Stage.verdict(`합 승리 · <b class="num">${dmg}</b> 피해 · SP +${spRule(sid).clashWin}`,'winv');
+    render(); await T(520);
+    return true;
+  }else{
+    const r=roll(eb,Math.max(ec,1),it.cp,50);
+    await Stage.duelFinal('R',r,'합 패배…','losev');
+    if(C!==cc) return false;
+    L(`<b>합 패배</b>: ${e.name}의 공격을 ${sname(sid)}이(가) 대신 맞는다.`,'lb');
+    if(spRule(sid).clashLose) spChange(sid,spRule(sid).clashLose);
+    const taken=await enemyHit(e,it,[sid],r,false);
+    Stage.verdict(`합 패배 · ${sname(sid)} <b class="num">${taken[0]||0}</b> 피해`,'losev');
+    render(); await T(520);
+    return false;
+  }
+}
+async function enemyHit(e,it,targets,r,allowStance=true){
+  const taken=[], cc=C;
+  for(const sid of targets){
+    if(C!==cc||!S.formation.includes(sid)){ taken.push(0); continue; }
+    const u=C.u[sid];
+    let raw=r.total;
+    const stc=allowStance?u.stance:null;
+    if(stc){
+      const sr=roll(stc.base,stc.coins,stc.cp,chance(sid));
+      const ok=stc.kind==='evade'?sr.total>=r.total:true;
+      await Stage.defend(sid,stc,sr,e,it,r,ok);
+      if(C!==cc){ taken.push(0); continue; }
+      if(stc.kind==='evade'){
+        if(ok){ L(`${coinHTML(sr)} ${sname(sid)} <b>회피 성공</b> (${sr.total} ≥ ${r.total})`,'lg'); addFx(sid,'evd',0); if(has('shardg')&&C.enemies.includes(e)){ L(`날 선 거울 조각: ${e.name}에게 4 피해`,'lc'); dealToEnemy(e,4,sid); } taken.push(0); render(); await T(200); continue; }
+        L(`${coinHTML(sr)} ${sname(sid)} 회피 실패 (${sr.total} < ${r.total})`,'lb'); u.stance=null;
+      }else{
+        u.stance=null; const red=Math.min(raw,sr.total); raw-=red;
+        L(`${coinHTML(sr)} ${sname(sid)} <b>수비</b>: 위력 ${red} 막음`,'lg');
+      }
+    }
+    const dmg=outMod(raw,e.st,u.st,false);
+    const hp0=S.party[sid].hp;
+    if(dmg>0){ L(`${coinHTML(r)} ${e.name} → ${sname(sid)} <b>${dmg}</b> 피해`,'lb'); dealToSinner(sid,dmg);
+      const cb=C.auras.filter(a=>a.k==='counterBleed'&&(!a.owner||S.formation.includes(a.owner))).reduce((t,a)=>t+a.n,0);
+      if(cb&&C.enemies.includes(e)){ e.st.bleed=(e.st.bleed||0)+cb; L(`역습: ${e.name} 출혈 ${cb}`,'lc'); } }
+    else L(`${sname(sid)}이(가) 공격을 완전히 막아냈다.`,'lg');
+    if(it.st&&dmg>0&&S.formation.includes(sid)) u.st[it.st.s]=(u.st[it.st.s]||0)+it.st.n;
+    taken.push(Math.max(0,hp0-Math.max(0,S.party[sid].hp)));
+    render();
+  }
+  return taken;
+}
+async function executeIntent(e){
+  const it=e.intent, cc=C;
+  if(e.staggered||!it||it.type==='stagger'){ L(`${e.name}: 흐트러져 움직이지 못한다.`); return; }
+  if(it.used){ L(`${e.name}: 이미 합에서 행동했다.`); return; }
+  if(it.cancelled){ L(`${e.name}: 행동이 취소됐다.`); return; }
+  it.used=true;
+  if(it.type==='atk'){
+    if(bleedTick(e.st,b=>{ L(`${e.name} 출혈로 ${b} 피해`,'lb'); dealToEnemy(e,b,null); })){ render(); await T(300); if(C!==cc||!C.enemies.includes(e)) return; }
+    const targets=it.tgt==='all'?S.formation.slice():[resolvedTarget(e)].filter(Boolean);
+    if(!targets.length) return;
+    C.actors={a:e.uid,t:targets}; render();
+    const r=roll(it.base+(e.power||0),it.coins,it.cp,50);
+    await Stage.single({head:`${e.name} · ${it.name} → ${it.tgt==='all'?'수감자 모두':sname(targets[0])}`,
+      name:e.name,skill:it.name,base:it.base+(e.power||0),coins:it.coins,cp:it.cp,chance:50,roll:r,sin:`var(--sin-${ENEMIES[e.id].sin})`});
+    if(C!==cc) return;
+    L(`${e.name}: <b>${it.name}</b>`);
+    const taken=await enemyHit(e,it,targets,r);
+    if(C!==cc) return;
+    Stage.verdict(targets.map((s,i)=>`${sname(s)} <b class="num">${taken[i]||0}</b>`).join(' · ')+' 피해','losev');
+    render(); await T(460);
+  }else if(it.type==='stress'){
+    const targets=it.tgt==='all'?S.formation.slice():[resolvedTarget(e)].filter(Boolean);
+    C.actors={a:e.uid,t:targets}; render();
+    await Stage.notice(`${e.name} · ${it.name}`,`<span class="ls">${it.tgt==='all'?'수감자 모두':sname(targets[0])} SP -${it.sp}</span>`);
+    targets.forEach(s=>spChange(s,-it.sp));
+    L(`${e.name}: <b>${it.name}</b> — SP -${it.sp}`,'ls');
+  }else if(it.type==='block'){
+    C.actors={a:e.uid,t:[]}; render();
+    await Stage.notice(`${e.name} · ${it.name}`,`방어도 ${it.block}${it.power?` · 위력 +${it.power}`:''}`);
+    e.block+=it.block; if(it.power) e.power+=it.power;
+    L(`${e.name}: ${it.name} (방어도 ${it.block})`);
+  }else if(it.type==='buff'){
+    C.actors={a:e.uid,t:C.enemies.map(x=>x.uid)}; render();
+    await Stage.notice(`${e.name} · ${it.name}`,`적 모두 위력 +${it.power}`);
+    C.enemies.forEach(x=>x.power+=it.power); L(`${e.name}: ${it.name} — 적 모두 위력 +${it.power}`);
+  }else if(it.type==='debuff'){
+    const t=resolvedTarget(e);
+    if(t){ C.actors={a:e.uid,t:[t]}; render();
+      await Stage.notice(`${e.name} · ${it.name}`,`${sname(t)} ${STATUS[it.st.s].n} ${it.st.n}`);
+      if(C!==cc||!C.u[t]) return;
+      C.u[t].st[it.st.s]=(C.u[t].st[it.st.s]||0)+it.st.n; L(`${e.name}: ${it.name} — ${sname(t)} ${STATUS[it.st.s].n} ${it.st.n}`); }
+  }else if(it.type==='push'){
+    C.actors={a:e.uid,t:S.formation.slice()}; render();
+    await Stage.notice(`${e.name} · ${it.name}`,`<span class="ls">진형이 뒤집힌다 · 거울 균열 ${it.cards}장</span>`);
+    S.formation.reverse();
+    for(let i=0;i<(it.cards||0);i++) C.disc.push(mkCard('crack'));
+    L(`${e.name}: <b>${it.name}</b> — 진형이 뒤집히고 균열 ${it.cards}장이 버림 더미에 섞였다.`,'ls');
+  }else if(it.type==='summon'){
+    C.actors={a:e.uid,t:[]}; render();
+    const un=ENEMIES[it.unit||'shard'].name;
+    await Stage.notice(`${e.name} · ${it.name}`,`${un}이(가) 나타난다`);
+    let n=0; while(C.enemies.length<4&&n<it.n){ C.enemies.push(mkEnemy(it.unit||'shard')); n++; }
+    L(`${e.name}: ${it.name} — ${un} ${n}명`,'ls');
+  }
+}
+async function endTurn(){
+  if(!C||C.busy||C.over) return;
+  const cc=C;
+  C.busy=true; C.enemyPhase=true; A.skip=false; UI.sel=null; UI.selUnit=null; UI.cons=null;
+  // 저주: 피의 빚
+  const debts=C.hand.filter(c=>c.id==='debt').length;
+  for(let i=0;i<debts;i++){ if(S.formation.length){ const s=pick(S.formation); spChange(s,-5); L(`피의 빚: ${sname(s)} SP -5`,'ls'); } }
+  const keep=[];
+  for(const c of C.hand){ const cd=CARDS[c.id];
+    if(cd.retain) keep.push(c);
+    else if(cd.ethereal){ C.exh.push(c); L(`${cd.name}: 휘발되어 사라졌다.`); }
+    else C.disc.push(c); }
+  C.hand=keep;
+  render();
+  try{
+    for(const e of C.enemies) e.block=0;
+    for(const e of C.enemies.slice()){
+      if(C!==cc||C.over) break;
+      if(!C.enemies.includes(e)) continue;
+      await sleep(FAST?0:(A.speed===0||A.skip)?140:Math.round(300/A.speed));
+      if(C!==cc||C.over) break;
+      await executeIntent(e);
+      if(C!==cc) break;
+      C.actors=null; render();
+    }
+    Stage.close();
+    if(C===cc&&!C.over) roundEnd();
+    if(C===cc&&!C.over){ C.round++; S.stats.turns++; startPlayerTurn(false); }
+  }catch(err){ console.error(err); toast('오류: '+(err.message||err)); }
+  finally{
+    Stage.close();
+    if(C===cc){ C.busy=false; C.enemyPhase=false; C.actors=null; render(); maybeFinish(); }
+  }
+}
+function roundEnd(){
+  for(const e of C.enemies) e.staggered=false;
+  // 화상
+  for(const sid of S.formation.slice()){ const u=C.u[sid]; if((u.st.burn||0)>0){ const b=u.st.burn; u.st.burn--; L(`${sname(sid)} 화상 ${b}`,'lb'); dealToSinner(sid,b,true); if(C.over) return; } }
+  for(const e of C.enemies.slice()){ if((e.st.burn||0)>0){ const b=e.st.burn; e.st.burn--; L(`${e.name} 화상 ${b}`,'lb'); dealToEnemy(e,b,null); if(C.over) return; } }
+  // 지속 시간
+  const tick=st=>{ for(const k of ['vuln','weak']) if(st[k]>0){ st[k]--; if(!st[k]) delete st[k]; } for(const k of ['bleed','burn']) if(st[k]<=0) delete st[k]; };
+  C.enemies.forEach(e=>tick(e.st));
+  for(const sid of S.formation){
+    const u=C.u[sid]; tick(u.st); u.guardBy=null;
+    if(u.panic){ u.panic=false; S.party[sid].sp=-15; L(`${sname(sid)}이(가) 패닉에서 벗어났다. (SP -15)`,'ls'); }
+  }
+}
+function moveAction(sid,dir){
+  if(!C||C.busy||C.over) return;
+  if(C.energy<1){ toast('에너지가 부족하다'); return; }
+  const i=S.formation.indexOf(sid), j=i+dir;
+  if(i<0||j<0||j>=S.formation.length) return;
+  C.energy-=1; moveTo(sid,j);
+  L(`${sname(sid)} 자리 이동 → ${j+1}열`);
+  render();
+}
+
+function finishCombat(){
+  if(!C||C.finished) return; C.finished=true; Stage.close();
+  if(C.over==='lose'){ endRun(false); return; }
+  // 전투 한정 상태 정리
+  for(const p of Object.values(S.party)) if(!p.down&&!p.gone&&p.hp<1) p.hp=1;
+  if(C.kind==='boss'&&S.floor>=FLOORS){ C=null; endRun(true); return; }
+  const boss=C.kind==='boss', elite=C.kind==='elite';
+  const enk=(boss?ri(55,65):elite?ri(40,50):ri(18,26))+(has('ledger')?15:0)+(pack().perk.enk||0);
+  S.enk+=enk;
+  const down=Object.values(S.party).filter(p=>p.down&&!p.gone).map(p=>p.id);
+  S.reward={enk,boss,cards:rewardCards(boss||elite?'elite':'normal'),cardDone:false,gift:boss||elite?randomGift():null,giftDone:false,down};
+  C=null; S.screen='reward'; save(); render();
+}
+function rewardCards(kind){
+  const w=kind==='elite'?{'일반':40,'고급':40,'희귀':20}:kind==='shop'?{'일반':50,'고급':35,'희귀':15}:{'일반':60,'고급':32,'희귀':8};
+  if(S.pack&&pack().perk.rare) w['희귀']*=pack().perk.rare;
+  const total=Object.values(w).reduce((a,b)=>a+b,0);
+  const want=kind!=='shop'&&has('seal')?4:3;
+  const pool=Object.entries(CARDS).filter(([id,c])=>c.owner&&!c.starter&&S.formation.includes(c.owner));
+  const out=[]; let guard=0;
+  while(out.length<want&&guard++<80){
+    let t=rnd()*total, rar='일반'; for(const [k,v] of Object.entries(w)){ if((t-=v)<0){rar=k;break;} }
+    const cand=pool.filter(([id,c])=>c.rar===rar&&!out.includes(id));
+    const any=pool.filter(([id])=>!out.includes(id));
+    const src=cand.length?cand:any; if(!src.length) break;
+    out.push(pick(src)[0]);
+  }
+  if(out.length&&!out.some(id=>CARDS[id].type==='공격')){
+    const atk=pool.filter(([id,c])=>c.type==='공격'&&!out.includes(id));
+    if(atk.length) out[out.length-1]=pick(atk)[0];
+  }
+  return out;
+}
+function randomGift(){
+  const fromPack=(S.pack?pack().gifts:[]).filter(g=>!has(g)); if(fromPack.length) return pick(fromPack);
+  const left=Object.keys(GIFTS).filter(g=>!has(g)); return left.length?pick(left):null;
+}
+
+/* =========================================================
+   8. 사건·휴식·상점·보급
+   ========================================================= */
+const inF=sid=>S.formation.includes(sid);
+const addStartSp=(sid,n)=>spChange(sid,n);
+const allSp=n=>S.formation.forEach(s=>addStartSp(s,n));
+function randomRare(){
+  const pool=Object.entries(CARDS).filter(([id,c])=>c.owner&&c.rar==='희귀'&&inF(c.owner));
+  return pool.length?pick(pool)[0]:null;
+}
+const hurt=(sid,n)=>{ const p=S.party[sid]; p.hp=Math.max(1,p.hp-n); };
+function upgradeOf(sid,n){
+  let k=0;
+  for(let i=0;i<n;i++){
+    const mine=S.deck.filter(c=>CARDS[c.id].owner===sid&&canUpgrade(c)); const any=S.deck.filter(canUpgrade);
+    const c=mine.length?pick(mine):(any.length?pick(any):null); if(!c) break; c.up=true; k++;
+  }
+  return k;
+}
+const giftLine=g=>g?`E.G.O 기프트 「${GIFTS[g].n}」을(를) 얻었다.`:'더 얻을 기프트가 없었다.';
+function takeGift(){ const g=randomGift(); if(g) S.gifts.push(g); return giftLine(g); }
+// 판정 확률: 기본값 + 죄악 자원 일치(주 +35, 부 +20) + 현재 SP의 절반
+function checkPct(sid,chk){
+  const ss=SINNERS[sid].sins; const m=ss[0]===chk.sin?35:ss[1]===chk.sin?20:0;
+  return clamp(chk.base+m+Math.round(S.party[sid].sp/2),5,95);
+}
+const EVENTS={
+  mirror:{title:'갈라진 거울',text:'좁은 골목 끝에 사람 키만 한 거울이 서 있다. 금 간 틈마다 조금씩 다른 얼굴이 비친다. 단테의 시계가 평소보다 크게 째깍거린다.',opts:[
+    {l:'거울 속을 들여다본다',d:'성공: 그 수감자의 카드 2장 강화 · 실패: SP -20',check:{sin:'gloom',base:35},
+      win(s){ const n=upgradeOf(s,2); return `${sname(s)}이(가) 거울 속 자신과 끝까지 눈을 맞췄다. 카드 ${n}장이 강화됐다.`; },
+      lose(s){ addStartSp(s,-20); return `${sname(s)}이(가) 거울 속 얼굴을 견디지 못하고 고개를 돌렸다. SP -20.`; }},
+    {l:'거울을 깨뜨린다',d:'엔케팔린 +40 · 모두 SP -10',run(){ S.enk+=40; allSp(-10); return '거울이 비명 같은 소리를 내며 부서졌다. 파편 사이에서 엔케팔린 40을 주웠다. 모두 SP -10.'; }},
+    {l:'지나친다',d:'아무 일도 없다',run(){ return '수감자들은 거울을 외면하고 지나갔다.'; }}]},
+  child:{title:'뒷골목 아이',text:'버려진 상자 뒤에서 아이 하나가 수감자들을 올려다본다. 손에는 녹슨 못을 꼭 쥐고, 등 뒤로 무언가를 숨기고 있다.',opts:[
+    {l:'먹을 것을 나눠 준다',d:'엔케팔린 -20 · 모두 SP +15',can:()=>S.enk>=20,need:'엔케팔린 20',run(){ S.enk-=20; allSp(15); return '아이는 말없이 빵을 받아 들고 사라졌다. 모두 SP +15.'; }},
+    {l:'숨긴 것을 알아낸다',d:'성공: 엔케팔린 +45 · 실패: 그 수감자 체력 -10',check:{sin:'envy',base:35},
+      win(s){ S.enk+=45; return `${sname(s)}이(가) 아이의 눈길을 따라가 숨겨 둔 엔케팔린 45를 찾아냈다.`; },
+      lose(s){ hurt(s,10); return `아이가 녹슨 못으로 ${sname(s)}의 손등을 찌르고 달아났다. 체력 -10.`; }},
+    {l:'모른 척한다',d:'아무 일도 없다',run(){ return '아이와 눈이 마주쳤지만 걸음을 멈추지 않았다.'; }}]},
+  contract:{title:'피 묻은 계약서',text:'바닥에 계약서 한 장이 떨어져 있다. 서명란만 비어 있고, 잉크 대신 아직 마르지 않은 피가 고여 있다.',opts:[
+    {l:'서명한다',d:'희귀 카드 1장 + 저주 「피의 빚」',run(){ const id=randomRare(); if(id) S.deck.push(mkCard(id)); S.deck.push(mkCard('debt')); return `${id?CARDS[id].name+'을(를) 얻었다. ':''}덱에 「피의 빚」이 들어왔다.`; }},
+    {l:'조항을 따져 읽는다',d:'성공: 희귀 카드 1장(저주 없음) · 실패: 「피의 빚」만 받는다',check:{sin:'pride',base:30},
+      win(s){ const id=randomRare(); if(id) S.deck.push(mkCard(id)); return `${sname(s)}이(가) 빠진 조항을 짚어냈다. ${id?CARDS[id].name+'을(를) 대가 없이 얻었다.':''}`; },
+      lose(s){ S.deck.push(mkCard('debt')); return `읽는 사이 손가락에 피가 묻었다. 서명한 것으로 처리돼 「피의 빚」이 덱에 들어왔다.`; }},
+    {l:'찢어 버린다',d:'성공: 이 층 팩의 E.G.O 기프트 · 실패: 그 수감자 체력 -12',check:{sin:'wrath',base:35},
+      win(s){ return `${sname(s)}이(가) 계약서를 갈가리 찢었다. 피 묻은 조각이 굳어 형태를 갖췄다. `+takeGift(); },
+      lose(s){ hurt(s,12); return `종이가 칼날처럼 ${sname(s)}의 손을 베었다. 체력 -12.`; }},
+    {l:'그냥 둔다',d:'아무 일도 없다',run(){ return '계약서는 바람에 날려 어둠 속으로 사라졌다.'; }}]},
+  tower:{title:'멈춘 시계탑',text:'바늘이 모두 떨어져 나간 시계탑이다. 단테의 머리에서 나는 소리와 똑같은 톱니 소리가 탑 안쪽에서 들린다.',opts:[
+    {l:'태엽을 감는다',d:'단테의 태엽 +1 · 모두 체력 -6',run(){ S.clocks++; S.formation.forEach(s=>hurt(s,6)); return '무거운 태엽을 감느라 모두 지쳤다(체력 -6). 태엽 1개를 챙겼다.'; }},
+    {l:'톱니 사이에 기대어 쉰다',d:'성공: 그 수감자 체력 모두 회복 · 실패: SP -15',check:{sin:'sloth',base:40},
+      win(s){ const p=S.party[s]; p.hp=p.max; return `${sname(s)}이(가) 톱니 소리를 자장가 삼아 푹 잤다. 체력을 모두 회복했다.`; },
+      lose(s){ addStartSp(s,-15); return `${sname(s)}은(는) 째깍거리는 소리 때문에 한숨도 못 잤다. SP -15.`; }},
+    {l:'부품을 뜯어 간다',d:'엔케팔린 +30',run(){ S.enk+=30; return '쓸 만한 톱니를 떼어 엔케팔린 30으로 바꿨다.'; }}]},
+  feast:{title:'버려진 연회장',text:'긴 식탁 위에 아직 김이 오르는 요리가 차려져 있다. 의자는 모두 뒤로 넘어져 있고, 주인은 보이지 않는다.',opts:[
+    {l:'남은 음식을 먹는다',d:'성공: 모두 체력 +12 · 실패: 그 수감자 체력 -10, SP -10',check:{sin:'gluttony',base:35},
+      win(s){ S.formation.forEach(x=>healSinner(x,12)); return `${sname(s)}이(가) 먼저 맛을 보고 괜찮다고 했다. 모두 배불리 먹었다. 체력 +12.`; },
+      lose(s){ hurt(s,10); addStartSp(s,-10); return `음식에서 쇠 맛이 났다. ${sname(s)}이(가) 한참을 토했다. 체력 -10, SP -10.`; }},
+    {l:'은식기를 챙긴다',d:'엔케팔린 +25',run(){ S.enk+=25; return '포크와 나이프를 챙겨 엔케팔린 25로 바꿨다.'; }},
+    {l:'자리를 뜬다',d:'아무 일도 없다',run(){ return '누군가의 식사를 방해하지 않기로 했다.'; }}]},
+  duel:{title:'결투 신청',text:'가면을 쓴 해결사가 길을 막고 장갑을 던진다. "가장 강한 사람이 나와라. 이기면 길을 비켜 주지."',opts:[
+    {l:'정정당당하게 받아 준다',d:'성공: E.G.O 기프트 + 엔케팔린 30 · 실패: 그 수감자 체력 -15',check:{sin:'lust',base:30},
+      win(s){ S.enk+=30; return `${sname(s)}이(가) 해결사를 쓰러뜨렸다. 해결사는 품에서 꺼낸 물건과 엔케팔린 30을 건넸다. `+takeGift(); },
+      lose(s){ hurt(s,15); return `${sname(s)}이(가) 한 합 만에 나가떨어졌다. 체력 -15. 해결사는 코웃음을 치며 사라졌다.`; }},
+    {l:'말이 끝나기 전에 덤빈다',d:'성공: 엔케팔린 +50 · 실패: 모두 체력 -6',check:{sin:'wrath',base:40},
+      win(s){ S.enk+=50; return `${sname(s)}의 기습에 해결사가 지갑을 떨어뜨리고 달아났다. 엔케팔린 +50.`; },
+      lose(s){ S.formation.forEach(x=>hurt(x,6)); return `기습은 읽혔다. 반격에 모두 휘말렸다. 체력 -6.`; }},
+    {l:'정중하게 거절한다',d:'엔케팔린 -15',can:()=>S.enk>=15,need:'엔케팔린 15',run(){ S.enk-=15; return '통행료를 쥐여 주고 조용히 지나갔다.'; }}]},
+};
+function pickEvent(){
+  const left=Object.keys(EVENTS).filter(k=>!S.seenEvents.includes(k));
+  const id=left.length?pick(left):pick(Object.keys(EVENTS));
+  S.seenEvents.push(id); return id;
+}
+function genShop(){
+  return {cards:[...rewardCards('shop'),pick(NEUTRAL)].map(id=>({id,sold:false})),
+          gifts:[...shuffle((S.pack?pack().gifts:[]).filter(g=>!has(g))),...shuffle(Object.keys(GIFTS).filter(g=>!has(g)&&!(S.pack&&pack().gifts.includes(g))))].slice(0,2).map(id=>({id,sold:false,price:ri(90,110)})),
+          cons:{id:pick(Object.keys(CONS)),sold:false},removed:false,removing:false};
+}
+function doSupply(){
+  const got=[]; const c=pick(Object.keys(CONS));
+  if(S.cons.length<3){ S.cons.push(c); got.push(CONS[c].n); }
+  S.enk+=20; allSp(5);
+  return `버려진 보급 상자를 찾았다. ${got.length?got.join(', ')+', ':''}엔케팔린 20을 챙겼다. 잠깐 숨을 돌려 모두 SP +5.${got.length?'':' (소모품 칸이 가득 차서 앰플은 두고 왔다.)'}`;
+}
+function useCons(i,targetSid){
+  const id=S.cons[i]; if(!id) return false; const K=CONS[id];
+  if(K.combatOnly&&!C){ toast('전투 중에만 쓸 수 있다'); return false; }
+  if(K.target==='ally'){
+    if(!S.formation.includes(targetSid)) return false;
+    if(id==='heal') healSinner(targetSid,15);
+    if(id==='calm') spChange(targetSid,25);
+    if(C) L(`${K.n}: ${sname(targetSid)}`,'lg');
+  }else if(id==='bomb'){
+    if(!C||C.busy||C.over) return false;
+    L(`${K.n}: 적 모두에게 8 피해`,'lc');
+    C.enemies.slice().forEach(e=>dealToEnemy(e,8,null));
+  }
+  S.cons.splice(i,1); UI.cons=null;
+  if(!C) save(); else maybeFinish();
+  return true;
+}
+
+/* =========================================================
+   9. 화면 그리기
+   ========================================================= */
+const app=document.getElementById('app');
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(UI.toastT); UI.toastT=setTimeout(()=>{t.hidden=true;},1800);
+}
+function cardHTML(inst,{state='',why='',action='card',key=null,price=null}={}){
+  const d=cdef(inst); const own=d.owner?SINNERS[d.owner]:null;
+  const sin=own?`var(--sin-${own.sin})`:'var(--bone-faint)';
+  const r=d.rar==='희귀'?' r-rare':'';
+  return `<button type="button" class="card ${state}${r}${d.up?' up':''}" data-a="${action}" data-id="${key??inst.u??inst.id}" style="--sin:${sin}" ${state.includes('off')?'aria-disabled="true"':''}>
+    <span class="cost num">${d.cost??'–'}</span>
+    <span class="c-owner">${own?own.name:d.neutral?'무색':d.type}</span>
+    <span class="c-name">${d.name}</span>
+    <span class="c-type">${d.type} · ${d.rar}</span>
+    <span class="c-desc">${descHTML(d)}</span>
+    <span class="c-pos">${posLine(d)}</span>
+    ${why?`<span class="why">${why}</span>`:state.includes('benched')?'<span class="why">보관함</span>':''}
+    ${price!=null?`<span class="price">${price} 엔케팔린</span>`:''}
+  </button>`;
+}
+function statusChips(st,extra=[]){
+  const out=extra.slice();
+  for(const [k,v] of Object.entries(st||{})) if(v>0&&STATUS[k]) out.push(`<span class="chip ${k}" title="${STATUS[k].d}">${STATUS[k].n} ${v}</span>`);
+  return `<div class="chips">${out.join('')}</div>`;
+}
+function spBar(sp){
+  const w=Math.abs(sp)/SP_MAX*50;
+  const style=sp>=0?`left:50%;width:${w}%`:`left:${50-w}%;width:${w}%`;
+  return `<div class="spbar"><i class="${sp>=0?'pos':'neg'}" style="${style}"></i><span class="mid"></span></div>`;
+}
+function giftListHTML(){
+  if(!S.gifts.length) return '<p class="muted" style="margin:0;font-size:12px">아직 E.G.O 기프트가 없다.</p>';
+  return `<div class="glist">${S.gifts.map(g=>`<div class="gitem"><b>${GIFTS[g].n}</b><span>${GIFTS[g].d}</span></div>`).join('')}</div>`;
+}
+function topbar(where){
+  const consOn=['map','rest','combat'].includes(S.screen);
+  const cons=S.cons.map((c,i)=>consOn?`<button type="button" class="consbtn${UI.cons===i?' on':''}" data-a="cons" data-i="${i}" title="${CONS[c].d}">${CONS[c].n}</button>`:`<span class="gift" style="border-color:var(--line-hi);color:var(--bone-dim)" title="${CONS[c].d}">${CONS[c].n}</span>`).join('');
+  return `<div class="topbar">
+    <span class="where">${where}</span>
+    <span class="stat">엔케팔린 <b>${S.enk}</b></span>
+    <span class="stat" title="전투가 끝난 뒤 쓰러진 수감자를 되살린다">단테의 태엽 <b>${S.clocks}</b></span>
+    <span class="stat">덱 <b>${activeDeck().length}/${S.deck.length}</b></span>
+    <button type="button" class="btn sm" data-a="gifts">E.G.O 기프트 ${S.gifts.length}</button>
+    ${cons?`<span class="row" style="gap:4px">${cons}</span>`:''}
+    <button type="button" class="btn sm" data-a="speed" title="코인·합 연출 속도">연출 ${SPEED_NAME[A.speed]}</button>
+    <button type="button" class="btn sm" data-a="deck">덱 보기</button>
+    <button type="button" class="btn sm" data-a="help">규칙</button>
+  </div>`;
+}
+
+function render(){
+  try{
+    if(!S){ renderTitle(); return; }
+    const scr=S.screen;
+    if(scr==='select') renderSelect();
+    else if(scr==='map') renderMap();
+    else if(scr==='pack') renderPack();
+    else if(scr==='prep') renderPrep();
+    else if(scr==='combat') renderCombat();
+    else if(scr==='reward') renderReward();
+    else if(scr==='event') renderEvent();
+    else if(scr==='rest') renderRest();
+    else if(scr==='shop') renderShop();
+    else if(scr==='supply') renderSupply();
+    else if(scr==='result') renderResult();
+    else renderTitle();
+  }catch(err){
+    console.error(err);
+    app.innerHTML=`<div class="panel center"><h2>화면을 그리다 오류가 났다</h2><p class="muted">${String(err&&err.message||err)}</p><div class="row"><button class="btn" data-a="tomap">지도로 돌아가기</button><button class="btn danger" data-a="title">타이틀로</button></div></div>`;
+  }
+}
+
+/* --- 타이틀 --- */
+let SEL=[];
+function renderTitle(){
+  const sv=loadSave();
+  app.innerHTML=`<section class="title">
+    <div class="screen">
+      <p class="eyebrow">림버스 컴퍼니 2차 창작 · 데모</p>
+      <h1>거울 던전<small>FAN-MADE · DEMO</small></h1>
+      <p class="lede">수감자 넷을 골라 뒷골목 아래 거울 던전으로 내려간다. 카드로 싸우고, 코인을 던져 합을 겨루고, 무너지는 정신력을 버티며 3층의 보스까지 살아남아라.</p>
+      <div class="row">
+        <button type="button" class="btn primary" data-a="new">새 원정</button>
+        ${sv?`<button type="button" class="btn" data-a="continue">이어하기</button>`:''}
+        <button type="button" class="btn" data-a="help">규칙 보기</button>
+      </div>
+      <p class="disclaimer">비공식 팬메이드 게임입니다. Project Moon과 관계없으며 비영리로 배포합니다. 공식 일러스트·음악·로고를 사용하지 않았고, 카드와 적, 사건은 모두 새로 지었습니다.</p>
+    </div>
+    <div class="mirror" aria-hidden="true">
+      <svg viewBox="0 0 300 400">
+        <rect x="40" y="16" width="220" height="368" fill="#120d0e" stroke="#5c4744" stroke-width="2"/>
+        <rect x="54" y="30" width="192" height="340" fill="#1a1416" stroke="#3a2d2e"/>
+        <g fill="none" stroke="#d8ab3e" stroke-width="1.4" stroke-linecap="round" opacity=".85">
+          <path d="M150 168 L96 84 L70 62"/><path d="M150 168 L214 92"/><path d="M150 168 L232 214 L246 222"/>
+          <path d="M150 168 L170 290 L160 368"/><path d="M150 168 L88 248 L56 270"/><path d="M96 84 L124 70"/><path d="M88 248 L112 300"/><path d="M232 214 L208 260"/>
+        </g>
+        <circle cx="150" cy="168" r="5" fill="#d8ab3e"/>
+        <g fill="none" stroke="#ece0c8" stroke-opacity=".12"><path d="M60 40 L240 360"/><path d="M240 40 L60 360"/></g>
+      </svg>
+    </div>
+  </section>`;
+}
+/* --- 편성 --- */
+function renderSelect(){
+  const cards=Object.entries(SINNERS).map(([id,d])=>{
+    const o=SEL.indexOf(id);
+    const starters=Object.values(CARDS).filter(c=>c.owner===id&&c.starter).map(c=>c.name+(c.starter>1?' ×'+c.starter:'')).join(' · ');
+    return `<button type="button" class="pick${o>=0?' on':''}" data-a="pick" data-id="${id}" style="--sin:var(--sin-${d.sin})" aria-pressed="${o>=0}">
+      ${o>=0?`<span class="order">${o+1}열</span>`:''}
+      <span class="eyebrow">No.${d.no} · ${d.identity} · ${SINS[d.sin]}</span>
+      <h3>${d.name}</h3>
+      <span class="meta">${d.role} · 체력 ${d.hp} · 추천 ${posTxt(d.pos)}</span>
+      <span class="trait"><b>${d.trait.n}</b> — ${d.trait.d}</span>
+      <span class="meta">SP 규칙: ${spRuleTxt(id)}</span>
+      <span class="meta">시작 카드: ${starters}</span>
+    </button>`;}).join('');
+  const slots=[0,1,2,3].map(i=>{
+    const id=SEL[i]; if(!id) return `<div class="fslot"><span class="muted">${i+1}열</span><span class="muted">비어 있음</span></div>`;
+    const d=SINNERS[id]; const bad=!d.pos.includes(i+1);
+    return `<div class="fslot" style="border-top:3px solid var(--sin-${d.sin})"><span class="muted">${i+1}열</span><b>${d.name}</b>
+      ${bad?`<span class="warn">추천 위치 아님 (${posTxt(d.pos)})</span>`:''}
+      <span class="row" style="gap:4px"><button type="button" class="btn sm" data-a="fm" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="앞으로">←</button><button type="button" class="btn sm" data-a="fm" data-i="${i}" data-d="1" ${i>=SEL.length-1?'disabled':''} aria-label="뒤로">→</button></span></div>`;
+  }).join('');
+  app.innerHTML=`<section class="screen">
+    <div class="topbar"><span class="where">수감자 편성</span><button type="button" class="btn sm" data-a="help">규칙</button><button type="button" class="btn sm" data-a="title">타이틀로</button></div>
+    <p class="muted" style="margin:0">수감자 4명을 고르면 고른 순서대로 1열(맨 앞)부터 선다. 카드마다 쓸 수 있는 열이 정해져 있으니 추천 위치를 참고하자.</p>
+    <div class="sel-grid">${cards}</div>
+    <div class="panel screen" style="gap:10px">
+      <span class="eyebrow">진형 · 1열이 맨 앞</span>
+      <div class="formation">${slots}</div>
+      <div class="row"><button type="button" class="btn primary" data-a="start" ${SEL.length===4?'':'disabled'}>원정 시작</button><span class="muted">${SEL.length}/4명</span></div>
+    </div>
+  </section>`;
+}
+/* --- 테마 팩 선택 --- */
+function enemyNames(list){ return [...new Set(list.flat())].map(id=>ENEMIES[id].name).join(', '); }
+function renderPack(){
+  const lv=S.floor-1;
+  const cards=S.packChoices.map(id=>{
+    const P=PACKS[id], B=ENEMIES[P.boss];
+    const gifts=P.gifts.map(g=>`<li><b>${GIFTS[g].n}</b>${has(g)?' <span class="muted">(보유)</span>':''} — ${GIFTS[g].d}</li>`).join('');
+    return `<article class="packcard" style="--sin:var(--sin-${P.sin})">
+      <span class="eyebrow">${SINS[P.sin]} · 테마 팩</span>
+      <h3>${P.name}</h3>
+      <p class="muted" style="margin:0">${P.text}</p>
+      <dl class="packinfo">
+        <dt>등장하는 적</dt><dd>${enemyNames([...P.enc.easy,...P.enc.hard])}</dd>
+        <dt>정예</dt><dd>${enemyNames(P.enc.elite)}</dd>
+        <dt>보스</dt><dd><b>${B.name}</b> <span class="muted">(${B.tag||'보스'})</span></dd>
+        <dt>팩 특성</dt><dd>${P.perkTxt}</dd>
+      </dl>
+      <div><span class="eyebrow">보상 · 정예·보스·사건에서 나오는 E.G.O 기프트</span><ul class="giftlist">${gifts}</ul></div>
+      <p class="muted" style="margin:0;font-size:12px">이 층의 적: 체력 +${lv*20}%${lv>=2?' · 위력 +1':''}</p>
+      <button type="button" class="btn primary" data-a="pack" data-id="${id}">이 팩으로 들어간다</button>
+    </article>`;}).join('');
+  app.innerHTML=`<section class="screen">
+    ${topbar(`${S.floor}층 · 테마 팩 선택`)}
+    ${S.floorMsg?`<div class="result-box">${S.floorMsg}</div>`:''}
+    <p class="muted" style="margin:0">팩이 이번 층의 적, 보스, 받을 수 있는 E.G.O 기프트를 정한다. ${FLOORS}층 보스까지 쓰러뜨리면 데모 클리어.</p>
+    <div class="packs">${cards}</div>
+  </section>`;
+}
+/* --- 전투 준비 --- */
+function sortDeck(list){
+  const order=id=>{ const o=CARDS[id].owner; const i=o?S.formation.indexOf(o):9; return i<0?8:i; };
+  return list.slice().sort((a,b)=>order(a.id)-order(b.id)||a.id.localeCompare(b.id));
+}
+function renderPrep(){
+  const node=S.prep&&S.prep.node?S.map.nodes[S.prep.node]:null;
+  const act=sortDeck(activeDeck()), off=sortDeck(S.deck.filter(c=>c.off));
+  const slots=[0,1,2,3].map(i=>{
+    const id=S.formation[i]; if(!id) return `<div class="fslot"><span class="muted">${i+1}열</span><span class="muted">비어 있음</span></div>`;
+    const d=SINNERS[id], p=S.party[id]; const bad=!d.pos.includes(i+1);
+    return `<div class="fslot" style="border-top:3px solid var(--sin-${d.sin})"><span class="muted">${i+1}열 · ${d.role}</span><b>${d.name}</b>
+      <span class="muted">체력 ${p.hp}/${p.max} · SP ${p.sp}</span>
+      ${bad?`<span class="warn">추천 위치 아님 (${posTxt(d.pos)})</span>`:''}
+      <span class="row" style="gap:4px"><button type="button" class="btn sm" data-a="pfm" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="앞으로">←</button><button type="button" class="btn sm" data-a="pfm" data-i="${i}" data-d="1" ${i>=S.formation.length-1?'disabled':''} aria-label="뒤로">→</button></span></div>`;
+  }).join('');
+  const head=node?`${NODE_T[node.type].n} 준비`:'덱 편성';
+  const info=node?(node.type==='boss'?`보스 <b>${ENEMIES[pack().boss].name}</b>이(가) 기다린다.`:node.type==='elite'?'강한 정예 적이 기다린다.':'전투 칸이다.'):'전투에 가져갈 카드를 미리 골라 둔다.';
+  const ok=act.length>=minDeck();
+  app.innerHTML=`<section class="screen">
+    ${topbar(head)}
+    <p class="muted" style="margin:0">${info} 진형을 바꾸고, 카드를 눌러 <b>가져갈 카드</b>와 <b>보관함</b> 사이를 옮긴다. 가져갈 카드는 최소 ${minDeck()}장. 저주는 뺄 수 없다.</p>
+    <div class="panel screen" style="gap:10px"><span class="eyebrow">진형 · 1열이 맨 앞</span><div class="formation">${slots}</div></div>
+    <div class="row" style="justify-content:space-between"><span class="eyebrow">가져갈 카드 · ${act.length}장</span>
+      <span class="row">${node?`<button type="button" class="btn" data-a="pback">지도로 돌아가기</button><button type="button" class="btn primary" data-a="pstart" ${ok?'':'disabled'}>전투 시작</button>`:`<button type="button" class="btn primary" data-a="pback" ${ok?'':'disabled'}>완료</button>`}</span></div>
+    ${ok?'':`<p class="hint"><b>${minDeck()-act.length}장</b>을 더 넣어야 한다.</p>`}
+    <div class="cards-grid">${act.map(c=>cardHTML(c,{action:'pcard',key:c.u})).join('')}</div>
+    <span class="eyebrow">보관함 · ${off.length}장 · 이번 전투에 쓰지 않는다</span>
+    <div class="cards-grid">${off.map(c=>cardHTML(c,{action:'pcard',key:c.u,state:'benched'})).join('')||'<p class="muted" style="margin:0">비어 있다.</p>'}</div>
+  </section>`;
+}
+/* --- 지도 --- */
+function partyMini(clickAction){
+  return Object.values(S.party).filter(p=>!p.gone).sort((a,b)=>S.formation.indexOf(a.id)-S.formation.indexOf(b.id)).map(p=>{
+    const d=SINNERS[p.id]; const pos=S.formation.indexOf(p.id)+1; const tgt=UI.cons!=null&&CONS[S.cons[UI.cons]]?.target==='ally'&&pos>0;
+    return `<button type="button" class="mini${tgt?' targetable clickable':''}" data-a="${clickAction}" data-id="${p.id}" style="--sin:var(--sin-${d.sin})" ${tgt?'':'tabindex="-1"'}>
+      <span class="mini-top"><b>${d.name}</b><span class="muted">${pos>0?pos+'열':'쓰러짐'} · ${d.role}</span></span>
+      <div class="bar"><i style="width:${p.hp/p.max*100}%"></i><b>${p.hp}/${p.max}</b></div>
+      ${spBar(p.sp)}
+      <span class="u-sp">SP <b>${p.sp}</b> <span>${spTier(p.sp)} · 앞면 ${clamp(50+p.sp,5,95)}%</span></span>
+    </button>`;}).join('');
+}
+function renderMap(){
+  const N=S.map.nodes, reach=reachable();
+  const W=420, rowH=76, H=(ROWS+1)*rowH+40;
+  const X=n=>n.id==='B'?W/2:60+n.c*((W-120)/(COLS-1));
+  const Y=n=>H-40-n.r*rowH;
+  let lines='', circles='';
+  for(const n of Object.values(N)) for(const id of n.next){
+    const m=N[id];
+    const onPath=S.visited.includes(n.id)&&S.visited.includes(m.id)&&S.visited.indexOf(m.id)===S.visited.indexOf(n.id)+1;
+    lines+=`<line x1="${X(n)}" y1="${Y(n)}" x2="${X(m)}" y2="${Y(m)}" stroke="${onPath?'#d8ab3e':'#4a3a39'}" stroke-width="${onPath?2.5:1.5}" ${onPath?'':'stroke-dasharray="4 5"'}/>`;
+  }
+  for(const n of Object.values(N)){
+    const t=NODE_T[n.type]; const isR=reach.includes(n.id); const v=S.visited.includes(n.id); const cur=S.cur===n.id;
+    const r=n.id==='B'?26:18;
+    const fill=v?'#2a2120':n.type==='elite'?'#2b1416':n.type==='boss'?'#2b1416':'#181214';
+    const stroke=isR?'#d8ab3e':cur?'#ece0c8':n.type==='elite'||n.type==='boss'?'#8f3a30':'#5c4744';
+    circles+=`<g class="node${isR?' reach':''}" ${isR?`data-a="node" data-id="${n.id}" tabindex="0" role="button" aria-label="${t.n}"`:''}>
+      <circle class="ring" cx="${X(n)}" cy="${Y(n)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isR||cur?2.5:1.5}"/>
+      <text x="${X(n)}" y="${Y(n)+5}" text-anchor="middle" font-family="Noto Serif KR, serif" font-weight="900" font-size="${n.id==='B'?17:14}" fill="${v?'#76695e':'#ece0c8'}">${t.g}</text>
+      ${cur?`<circle cx="${X(n)+r-3}" cy="${Y(n)-r+3}" r="4" fill="#d8ab3e"/>`:''}
+    </g>`;
+  }
+  const legend=Object.entries(NODE_T).map(([k,t])=>`<span><b>${t.g}</b>${t.n}</span>`).join('');
+  app.innerHTML=`<section class="screen">
+    ${topbar(`${S.floor}층 · ${pack().name}`)}
+    <div class="mapwrap">
+      <aside class="side-panel">
+        <span class="eyebrow">진형</span>
+        ${partyMini('mapally')}
+        ${UI.cons!=null?`<p class="hint"><b>${CONS[S.cons[UI.cons]].n}</b>: 쓸 수감자를 누르세요.</p>`:''}
+        <span class="eyebrow">테마 팩</span>
+        <div class="mini" style="--sin:var(--sin-${pack().sin})"><b style="font-family:var(--f-display)">${pack().name}</b><span class="muted" style="font-size:12px">보스: ${ENEMIES[pack().boss].name}<br>특성: ${pack().perkTxt}<br>기프트: ${pack().gifts.map(g=>GIFTS[g].n).join(', ')}</span></div>
+        <span class="eyebrow">지도</span>
+        <div class="legend">${legend}</div>
+        <p class="muted" style="font-size:12px;margin:0">밝게 깜빡이는 칸으로만 갈 수 있다. 맨 위 終이 이 층의 보스.</p>
+        <span class="eyebrow">E.G.O 기프트 · ${S.gifts.length}</span>
+        ${giftListHTML()}
+        <button type="button" class="btn sm" data-a="prepopen">덱 편성</button>
+        <button type="button" class="btn sm danger" data-a="abandon">원정 포기</button>
+      </aside>
+      <div class="mapbox" id="mapbox"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="거울 던전 지도">${lines}${circles}</svg></div>
+    </div>
+  </section>`;
+  const box=document.getElementById('mapbox');
+  if(box){ const curRow=S.cur?S.map.nodes[S.cur].r:0; const ratio=1-(curRow+1)/(ROWS+1); box.scrollTop=Math.max(0,box.scrollHeight*ratio-box.clientHeight*0.6); }
+}
+/* --- 전투 --- */
+function sinnerPlate(sid,sd){
+  const p=S.party[sid], D=SINNERS[sid], u=C.u[sid], pos=S.formation.indexOf(sid)+1;
+  let cls='unit sinner clickable';
+  const needAlly=(sd&&sd.target==='ally')||(UI.cons!=null&&CONS[S.cons[UI.cons]]?.target==='ally');
+  if(needAlly){ const ok=sd?validAllies(sd).includes(sid):true; cls+=ok?' targetable':' nottarget'; }
+  if(UI.selUnit===sid) cls+=' sel';
+  if(u.panic) cls+=' panic';
+  if(C.actors&&C.actors.a===sid) cls+=' acting';
+  if(C.actors&&C.actors.t.includes(sid)) cls+=' targeted';
+  const fx=C.fx[sid]; if(fx&&fx.kind==='hit'&&Date.now()-fx.t<500) cls+=' hit';
+  const extra=[];
+  if(u.block>0) extra.push(`<span class="chip block" title="피해를 먼저 막는다. 내 턴이 시작되면 사라진다.">방어 ${u.block}</span>`);
+  if(u.guardBy) extra.push(`<span class="chip guard" title="이번 라운드 이 수감자를 노린 공격은 ${sname(u.guardBy)}이(가) 대신 받는다.">엄호: ${sname(u.guardBy)}</span>`);
+  if(u.stance){ const t=u.stance; extra.push(`<span class="chip stance" title="${t.kind==='evade'?'공격 위력보다 같거나 높게 굴리면 피해 0, 성공하면 유지':'처음 받는 공격의 피해를 굴린 수치만큼 줄인다'}. 내 턴이 시작되면 사라진다.">${t.kind==='evade'?'회피':'수비'} ${t.base}~${t.base+t.coins*t.cp}</span>`); }
+  if(u.panic) extra.push(`<span class="chip panic" title="이번 턴 이 수감자의 카드를 쓸 수 없다. 라운드가 끝나면 SP -15로 회복.">패닉</span>`);
+  const mv=UI.selUnit===sid&&!C.busy?`<div class="movebar">
+      <button type="button" class="btn" data-a="move" data-id="${sid}" data-d="-1" ${pos<=1?'disabled':''}>앞으로</button>
+      <button type="button" class="btn" data-a="move" data-id="${sid}" data-d="1" ${pos>=S.formation.length?'disabled':''}>뒤로</button>
+    </div><span class="u-role">자리 바꾸기: 에너지 1</span>`:'';
+  return `<div class="${cls}" data-a="ally" data-id="${sid}" style="--sin:var(--sin-${D.sin})" tabindex="0" role="button" aria-label="${D.name}">
+    ${fx&&Date.now()-fx.t<900?(fx.kind==='evd'?`<span class="dmgpop blk">회피!</span>`:`<span class="dmgpop ${fx.kind==='heal'?'heal':fx.kind==='blk'?'blk':''}">${fx.kind==='hit'?'-':'+'}${fx.n}</span>`):''}
+    <div class="u-top"><span class="pos">${pos}열</span><span>No.${D.no}</span></div>
+    <div class="u-name">${D.name}</div>
+    <div class="u-role">${D.role}</div>
+    <div class="bar"><i style="width:${p.hp/p.max*100}%"></i><b>${p.hp}/${p.max}</b></div>
+    ${spBar(p.sp)}
+    <div class="u-sp"><span>SP <b>${p.sp}</b></span><span>앞면 ${chance(sid)}%</span></div>
+    ${statusChips(u.st,extra)}
+    ${mv}
+  </div>`;
+}
+function enemyPlate(e,i,sd,selInst){
+  const D=ENEMIES[e.id];
+  let cls='unit enemy';
+  let clashTxt='';
+  if(sd&&(sd.target==='enemy'||sd.target==='allEnemies')){
+    const ok=validEnemies(sd).includes(e);
+    cls+=ok?' targetable':' nottarget';
+    const atk=sd.fx.find(f=>f.t==='atk');
+    if(ok&&atk&&sd.target==='enemy'&&canClash(e,sd.owner)){ const r=clashRanges(sd.owner,atk,e); clashTxt=`<span class="clash">합 발생 · 나 ${r.p[0]}~${r.p[1]} vs 적 ${r.e[0]}~${r.e[1]}</span>`; }
+  }
+  if(UI.cons!=null&&CONS[S.cons[UI.cons]]?.target==='allEnemies') cls+=' targetable';
+  if(C.actors&&C.actors.a===e.uid) cls+=' acting';
+  if(C.actors&&C.actors.t.includes(e.uid)) cls+=' targeted';
+  const fx=C.fx[e.uid]; if(fx&&fx.kind==='hit'&&Date.now()-fx.t<500) cls+=' hit';
+  const it=intentText(e);
+  const extra=[];
+  if(e.block>0) extra.push(`<span class="chip block">방어 ${e.block}</span>`);
+  if(e.power>0) extra.push(`<span class="chip power" title="${STATUS.power.d}">위력 +${e.power}</span>`);
+  if(e.staggered) extra.push(`<span class="chip stag" title="행동 불가, 받는 피해 +50%">흐트러짐</span>`);
+  const ticks=e.stag.map(s=>`<span class="tick" style="left:${s*100}%" title="흐트러짐 선"></span>`).join('');
+  return `<div class="enemycol" style="display:flex;flex-direction:column;gap:6px;min-width:0">
+    <div class="intent ${it.cls}" data-for="${e.uid}">${it.html}${clashTxt}</div>
+    <div class="${cls}" data-a="enemy" data-id="${e.uid}" style="--sin:var(--sin-${D.sin})" tabindex="0" role="button" aria-label="${e.name}">
+      ${fx&&Date.now()-fx.t<900&&fx.kind==='hit'?`<span class="dmgpop">-${fx.n}</span>`:''}
+      <div class="u-top"><span class="pos">${i+1}열</span><span>${D.tag||(D.elite?'정예':D.boss?'보스':'')}</span></div>
+      <div class="u-name">${e.name}</div>
+      <div class="bar"><i style="width:${Math.max(0,e.hp)/e.max*100}%"></i>${ticks}<b>${Math.max(0,e.hp)}/${e.max}</b></div>
+      ${statusChips(e.st,extra)}
+    </div>
+  </div>`;
+}
+function renderCombat(){
+  if(!C){ // 새로고침 등으로 전투 상태가 없으면 해당 노드 전투를 다시 시작
+    startCombat(S.map.nodes[S.cur]);
+  }
+  const selInst=UI.sel?C.hand.find(c=>c.u===UI.sel):null; if(UI.sel&&!selInst) UI.sel=null;
+  const sd=selInst?cdef(selInst):null;
+  const partySlots=[3,2,1,0].map(i=>{ const sid=S.formation[i]; return sid?sinnerPlate(sid,sd):`<div class="slot-empty">${i+1}열</div>`; }).join('');
+  const enemySlots=[0,1,2,3].map(i=>{ const e=C.enemies[i]; return e?enemyPlate(e,i,sd,selInst):`<div class="slot-empty">—</div>`; }).join('');
+  let hint='빨간 선이 적이 이번 라운드에 노리는 수감자다. 공격 카드로 그 적에게 합을 걸거나, 회피·수비·방어로 대비하자.';
+  if(C.busy) hint=C.enemyPhase?'<b>적이 행동하는 중…</b> 아래 패널을 누르면 건너뛴다.':'<b>공격을 처리하는 중…</b> 아래 패널을 누르면 건너뛴다.';
+  else if(C.over) hint=C.over==='win'?'<b>승리!</b>':'<b>전멸…</b>';
+  else if(UI.cons!=null){ const K=CONS[S.cons[UI.cons]]; hint=K.target==='ally'?`<b>${K.n}</b>: 쓸 수감자를 누르세요.`:`<b>${K.n}</b>: 아무 적이나 누르면 사용.`; }
+  else if(sd){
+    if(sd.target==='enemy') hint=sd.fx.some(f=>f.t==='atk')?`<b>${sd.name}</b>: 노릴 적을 누르세요 (적 ${posTxt(sd.tpos)}). <b>금색 선</b>인 적은 공격이 합으로 이어진다.`:`<b>${sd.name}</b>: 대상 적을 누르세요 (적 ${posTxt(sd.tpos)}).`;
+    else if(sd.target==='ally') hint=`<b>${sd.name}</b>: 대상 수감자를 누르세요.`;
+    else hint=`<b>${sd.name}</b>: 카드를 한 번 더 누르면 사용.`;
+  }
+  const hand=C.hand.map(c=>{
+    const chk=canPlay(c); const st=(UI.sel===c.u?'sel ':'')+(chk.ok?'':'off');
+    return cardHTML(c,{state:st,why:chk.ok?'':chk.why});
+  }).join('') || '<p class="muted">손패가 비었다.</p>';
+  const logHTML=C.log.slice().reverse().map(l=>`<p class="${l.cls}">${l.html}</p>`).join('');
+  const node=S.map.nodes[S.cur];
+  app.innerHTML=`<section class="screen">
+    ${topbar(`${NODE_T[node.type].n} · 라운드 ${C.round}`)}
+    <div class="combat">
+      <div class="field" id="field">
+        <svg class="arrows" id="arrows" aria-hidden="true"></svg>
+        <div class="side partyside" aria-label="수감자 진형">${partySlots}</div>
+        <div class="vs">대치</div>
+        <div class="side enemyside" aria-label="적 진형">${enemySlots}</div>
+      </div>
+      <div class="screen" style="gap:8px">
+        <p class="hint" aria-live="polite">${hint}</p>
+        ${C.auras.length?`<div class="chips"><span class="eyebrow" style="margin-right:4px">파워</span>${C.auras.map(a=>`<span class="chip power" title="${auraText(a.k,a.n).replace(/<[^>]+>/g,'')}">${a.name}</span>`).join('')}</div>`:''}
+        <div class="handbar">
+          <div class="row" style="gap:12px;flex-wrap:nowrap">
+            <div class="energy" title="카드를 쓰는 데 필요하다. 턴마다 3으로 채워진다."><b>${C.energy}</b><span>에너지</span></div>
+            <div class="piles"><span>뽑을 더미 <b>${C.draw.length}</b></span><span>버림 <b>${C.disc.length}</b></span><span>소멸 <b>${C.exh.length}</b></span></div>
+          </div>
+          <div class="hand">${hand}</div>
+          <div class="endcol"><button type="button" class="btn primary" data-a="end" ${C.busy||C.over?'disabled':''}>턴 종료</button><span class="muted" style="font-size:11px;text-align:center">단축키 E</span></div>
+        </div>
+      </div>
+      <aside class="cside"><span class="eyebrow">E.G.O 기프트</span>${giftListHTML()}<span class="eyebrow">전투 기록</span><div class="log" aria-label="전투 기록">${logHTML}</div></aside>
+    </div>
+  </section>`;
+  drawArrows(sd);
+}
+const ARROW_C={atk:'#e5483f',stress:'#c25bd0',debuff:'#9b82d6',clash:'#ecbd4e'};
+function drawArrows(sd){
+  const field=document.getElementById('field'), svg=document.getElementById('arrows');
+  if(!field||!svg||!C) return;
+  const fr=field.getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${fr.width} ${fr.height}`);
+  const rel=el=>{ if(!el) return null; const r=el.getBoundingClientRect(); return {x:r.left-fr.left,y:r.top-fr.top,w:r.width,h:r.height}; };
+  const plate=id=>rel(field.querySelector(`.unit[data-id="${id}"]`));
+  const ibox=id=>rel(field.querySelector(`.intent[data-for="${id}"]`));
+  const atkSel=sd&&sd.target==='enemy'&&sd.fx.some(f=>f.t==='atk')&&!C.busy;
+  let out='';
+  const curve=(a,b,k,color,opt={})=>{
+    const stacked=b.y>a.y+a.h-2;   // 모바일: 적이 위, 수감자가 아래
+    let x1,y1,x2,y2,cx,cy;
+    if(stacked){ x1=a.x+a.w/2; y1=a.y+a.h; x2=b.x+b.w/2; y2=b.y; cx=(x1+x2)/2+(k-1.5)*22; cy=(y1+y2)/2; }
+    else{ x1=a.x+a.w/2; y1=a.y; x2=b.x+b.w/2; y2=b.y; cx=(x1+x2)/2; cy=Math.min(y1,y2)-(118+k*26); }
+    const d=`M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${(y2-2).toFixed(1)}`;
+    const mid={x:.25*x1+.5*cx+.25*x2, y:.25*y1+.5*cy+.25*y2};
+    const mk=opt.marker||'r';
+    let g=`<path d="${d}" fill="none" stroke="${color}" stroke-opacity=".22" stroke-width="${opt.thin?6:9}" stroke-linecap="round"/>`;
+    g+=`<path class="arrow-line" d="${d}" fill="none" stroke="${color}" stroke-width="${opt.thin?2:3}" stroke-linecap="round" ${opt.dash?'stroke-dasharray="7 6"':''} marker-end="url(#ah-${mk})"/>`;
+    if(opt.label){ const w=opt.label.length*7+14; g+=`<g transform="translate(${mid.x.toFixed(1)} ${mid.y.toFixed(1)})"><rect x="${-w/2}" y="-10" width="${w}" height="20" rx="3" fill="#120d0e" stroke="${color}"/><text y="4.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="${color}">${opt.label}</text></g>`; }
+    return g;
+  };
+  C.enemies.forEach((e,k)=>{
+    const it=e.intent;
+    if(!it||it.cancelled||it.used||e.staggered||!['atk','stress','debuff'].includes(it.type)) return;
+    const tg=it.tgt==='all'?S.formation.slice():[resolvedTarget(e)].filter(Boolean);
+    const clash=atkSel&&validEnemies(sd).includes(e)&&canClash(e,sd.owner);
+    const color=clash?ARROW_C.clash:ARROW_C[it.type];
+    const pw=e.power||0;
+    const lab=it.type==='atk'?`${it.base+pw}~${it.base+pw+it.coins*it.cp}`:it.type==='stress'?`SP -${it.sp}`:STATUS[it.st.s].n;
+    const src0=plate(e.uid), ib=ibox(e.uid);
+    tg.forEach((sid,j)=>{
+      const dst=plate(sid); if(!dst||!src0) return;
+      const stacked=dst.y>src0.y+src0.h-2;
+      const src=stacked?src0:(ib||src0);
+      out+=curve(src,dst,k,color,{thin:it.tgt==='all',dash:it.type==='debuff',label:j===0?(clash?'합 '+lab:lab):'',marker:clash?'g':it.type==='atk'?'r':'p'});
+    });
+  });
+  const mk=(id,c)=>`<marker id="ah-${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`;
+  svg.innerHTML=`<defs>${mk('r',ARROW_C.atk)}${mk('p',ARROW_C.stress)}${mk('g',ARROW_C.clash)}</defs>${out}`;
+}
+window.addEventListener('resize',()=>{ if(S&&S.screen==='combat'&&C){ const sel=UI.sel&&C.hand.find(c=>c.u===UI.sel); drawArrows(sel?cdef(sel):null); } });
+/* --- 보상 --- */
+function renderReward(){
+  const R=S.reward;
+  const cards=R.cardDone?`<p class="muted">${R.cardDone===true?'카드를 정했다.':''}</p>`:`<div class="cards-grid">${R.cards.map(id=>cardHTML({id,up:false},{action:'rwcard',key:id})).join('')}</div>
+    <div class="row"><button type="button" class="btn sm" data-a="rwskip">카드 받지 않기</button></div>`;
+  const gift=R.gift?`<div class="panel screen" style="gap:8px"><span class="eyebrow">E.G.O 기프트</span><h3>${GIFTS[R.gift].n}</h3><p class="muted" style="margin:0">${GIFTS[R.gift].d}</p>
+    ${R.giftDone?'<p class="muted" style="margin:0">챙겼다.</p>':'<div class="row"><button type="button" class="btn" data-a="rwgift">챙기기</button></div>'}</div>`:'';
+  const downs=R.down.map(sid=>`<div class="result-box row" style="justify-content:space-between">
+      <span><b>${sname(sid)}</b>이(가) 쓰러져 있다. 되살리지 않으면 이번 원정에서 떠나고, 그 수감자의 카드도 덱에서 빠진다.</span>
+      <span class="row"><button type="button" class="btn primary sm" data-a="revive" data-id="${sid}" ${S.clocks>0?'':'disabled'}>태엽 1개로 되살리기 (SP -20)</button><button type="button" class="btn sm danger" data-a="letgo" data-id="${sid}">보내 준다</button></span>
+    </div>`).join('');
+  app.innerHTML=`<section class="screen">
+    ${topbar('전투 보상')}
+    <div class="center screen">
+      <h2>${R.boss?`${S.floor}층 보스 격파`:'살아남았다'}</h2>
+      <p class="muted" style="margin:0">엔케팔린 <b class="num">+${R.enk}</b>을(를) 챙겼다.</p>
+      ${downs?`<div class="screen" style="gap:8px"><span class="eyebrow">단테의 시계 · 남은 태엽 ${S.clocks}</span>${downs}</div>`:''}
+      <span class="eyebrow">카드 보상 · 하나를 골라 덱에 넣는다</span>
+      ${cards}
+      ${gift}
+      <div class="row"><button type="button" class="btn primary" data-a="rwdone" ${R.down.length?'disabled':''}>${R.boss?'다음 층으로':'지도로'}</button>${R.down.length?'<span class="muted">쓰러진 수감자를 먼저 정해야 한다.</span>':''}</div>
+    </div>
+  </section>`;
+}
+/* --- 사건 --- */
+function renderEvent(){
+  const E=EVENTS[S.event.id], ev=S.event;
+  let body;
+  if(ev.result){
+    body=`<div class="result-box">${ev.result}</div><div class="row"><button type="button" class="btn primary" data-a="done">지도로</button></div>`;
+  }else if(ev.picking!=null){
+    const o=E.opts[ev.picking];
+    const list=S.formation.map(sid=>{
+      const d=SINNERS[sid], pct=checkPct(sid,o.check); const m=d.sins[0]===o.check.sin?'주 죄악 일치 +35':d.sins[1]===o.check.sin?'부 죄악 일치 +20':'일치 없음';
+      return `<button type="button" class="tile" data-a="evsinner" data-id="${sid}" style="border-top:3px solid var(--sin-${d.sin})">
+        <span class="eyebrow">${d.sins.map(x=>SINS[x]).join(' · ')}</span><h3>${d.name}</h3>
+        <p><b class="num" style="font-size:22px;color:var(--brass)">${pct}%</b></p><span class="req">${m}</span></button>`;}).join('');
+    body=`<div class="result-box"><b>${o.l}</b> · 판정: <span style="color:var(--sin-${o.check.sin})">${SINS[o.check.sin]}</span><br><span class="muted">${o.d}</span></div>
+      <p class="muted" style="margin:0">판정할 수감자를 고르세요. 죄악 자원이 맞을수록, 그 수감자의 SP가 높을수록 성공 확률이 오른다.</p>
+      <div class="tiles">${list}</div><div class="row"><button type="button" class="btn sm" data-a="evback">다른 선택지 보기</button></div>`;
+  }else{
+    body=`<div class="tiles">${E.opts.map((o,i)=>{ const ok=!o.can||o.can();
+      return `<button type="button" class="tile" data-a="evopt" data-i="${i}" ${ok?'':'disabled'}>
+        ${o.check?`<span class="eyebrow" style="color:var(--sin-${o.check.sin})">판정 · ${SINS[o.check.sin]}</span>`:''}
+        <h3>${o.l}</h3><p>${o.d}</p>${ok?'':`<span class="req">${o.need} 필요</span>`}${o.check?'<span class="req">수감자 1명을 골라 판정</span>':''}</button>`;}).join('')}</div>`;
+  }
+  app.innerHTML=`<section class="screen">
+    ${topbar('사건')}
+    <div class="center screen">
+      <span class="eyebrow">사건</span>
+      <h2>${E.title}</h2>
+      <p style="margin:0;max-width:62ch;color:var(--bone-dim)">${E.text}</p>
+      ${body}
+    </div>
+  </section>`;
+}
+async function resolveCheck(sid){
+  const ev=S.event; if(!ev||ev.result||ev.picking==null||UI.evBusy) return;
+  const o=EVENTS[ev.id].opts[ev.picking]; if(!o||!o.check||!S.formation.includes(sid)) return;
+  UI.evBusy=true; A.skip=false;
+  const pct=checkPct(sid,o.check), ok=rnd()*100<pct;
+  try{ await Stage.check(sid,o.check.sin,pct,ok); } finally { Stage.close(); }
+  const txt=ok?o.win(sid):o.lose(sid);
+  ev.result=`<b class="${ok?'okc':'failc'}">판정 ${ok?'성공':'실패'}</b> · ${sname(sid)} · ${SINS[o.check.sin]} ${pct}%<br>${txt}`;
+  ev.picking=null; UI.evBusy=false; save(); render();
+}
+/* --- 휴식 --- */
+function renderRest(){
+  const R=S.rest;
+  let body='';
+  if(R.done) body=`<div class="result-box">${R.done}</div><div class="row"><button type="button" class="btn primary" data-a="done">지도로</button></div>`;
+  else if(R.picking){
+    const ups=S.deck.filter(canUpgrade);
+    body=`<p class="muted" style="margin:0">강화할 카드를 고르세요. 강화된 모습을 보여 준다.</p>
+      <div class="cards-grid">${ups.map(c=>cardHTML({id:c.id,up:true},{action:'restup',key:c.u})).join('')||'<p class="muted">강화할 카드가 없다.</p>'}</div>
+      <div class="row"><button type="button" class="btn sm" data-a="restback">돌아가기</button></div>`;
+  }else body=`<div class="tiles">
+      <button type="button" class="tile" data-a="rest" data-k="heal"><h3>치료</h3><p>수감자 모두 최대 체력의 30%를 회복한다.</p></button>
+      <button type="button" class="tile" data-a="rest" data-k="talk"><h3>대화</h3><p>모닥불 앞에서 이야기를 나눈다. 수감자 모두 SP +20.</p></button>
+      <button type="button" class="tile" data-a="rest" data-k="up" ${S.deck.some(canUpgrade)?'':'disabled'}><h3>정비</h3><p>카드 1장을 강화한다.</p></button>
+    </div>`;
+  app.innerHTML=`<section class="screen">${topbar('휴식')}
+    <div class="mapwrap"><aside class="side-panel"><span class="eyebrow">진형</span>${partyMini('mapally')}<span class="eyebrow">E.G.O 기프트 · ${S.gifts.length}</span>${giftListHTML()}</aside>
+    <div class="screen"><span class="eyebrow">휴식 · 하나만 고를 수 있다</span><h2>버스 안, 잠깐의 정적</h2>${body}</div></div>
+  </section>`;
+}
+/* --- 상점 --- */
+function renderShop(){
+  const P=S.shop;
+  const cards=P.cards.map((c,i)=>{ const pr=PRICE[CARDS[c.id].rar]; return c.sold?`<div class="slot-empty" style="width:136px;min-height:192px">팔림</div>`:cardHTML({id:c.id,up:false},{action:'buycard',key:String(i),price:pr,state:S.enk<pr?'off':''}); }).join('');
+  const gifts=P.gifts.map((g,i)=>`<button type="button" class="tile" data-a="buygift" data-i="${i}" ${g.sold||S.enk<g.price?'disabled':''}><h3>${GIFTS[g.id].n}</h3><p>${GIFTS[g.id].d}</p><span class="req">${g.sold?'팔림':g.price+' 엔케팔린'}</span></button>`).join('');
+  const cn=P.cons; const consT=`<button type="button" class="tile" data-a="buycons" ${cn.sold||S.enk<30||S.cons.length>=3?'disabled':''}><h3>${CONS[cn.id].n}</h3><p>${CONS[cn.id].d}</p><span class="req">${cn.sold?'팔림':S.cons.length>=3?'소모품 칸이 가득 참':'30 엔케팔린'}</span></button>`;
+  const rem=`<button type="button" class="tile" data-a="remove" ${P.removed||S.enk<50||S.deck.length<=5?'disabled':''}><h3>카드 제거</h3><p>덱에서 카드 1장을 뺀다. 상점마다 한 번.</p><span class="req">${P.removed?'이용함':'50 엔케팔린'}</span></button>`;
+  let body=`<span class="eyebrow">카드</span><div class="cards-grid">${cards}</div>
+    <span class="eyebrow">E.G.O 기프트 · 소모품 · 서비스</span><div class="tiles">${gifts}${consT}${rem}</div>
+    <div class="row"><button type="button" class="btn primary" data-a="done">상점을 나간다</button></div>`;
+  if(P.removing) body=`<p class="muted" style="margin:0">뺄 카드를 고르세요.</p><div class="cards-grid">${S.deck.map(c=>cardHTML(c,{action:'removecard',key:c.u})).join('')}</div><div class="row"><button type="button" class="btn sm" data-a="removeback">취소</button></div>`;
+  app.innerHTML=`<section class="screen">${topbar('상점')}<div class="screen"><h2>뒷골목 잡화점</h2>${body}</div></section>`;
+}
+function renderSupply(){
+  app.innerHTML=`<section class="screen">${topbar('보급')}<div class="center screen"><h2>보급 상자</h2><div class="result-box">${S.supply}</div><div class="row"><button type="button" class="btn primary" data-a="done">지도로</button></div></div></section>`;
+}
+/* --- 결과 --- */
+function renderResult(){
+  const win=S.result&&S.result.win;
+  const alive=Object.values(S.party).filter(p=>!p.gone&&!p.down).map(p=>sname(p.id));
+  app.innerHTML=`<section class="center screen" style="padding-block:6vh">
+    <p class="eyebrow">${win?'데모 클리어':'원정 실패'}</p>
+    <h1 style="font-size:clamp(36px,6vw,60px)">${win?'거울 던전을 빠져나왔다':'거울 속에 삼켜졌다'}</h1>
+    <p class="muted" style="max-width:56ch;margin:0">${win?`${FLOORS}층 보스까지 모두 쓰러뜨렸다. 데모는 여기까지다. 다른 테마 팩 조합으로 다시 도전해 보자.`:`${S.floor}층에서 수감자들이 모두 쓰러졌다. 진형과 SP 관리를 바꿔 다시 도전해 보자.`}</p>
+    <div class="panel" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+      <div><span class="eyebrow">도달한 층</span><div class="num" style="font-size:24px">${S.floor}/${FLOORS}</div></div>
+      <div><span class="eyebrow">지나온 칸</span><div class="num" style="font-size:24px">${S.stats.nodes}</div></div>
+      <div><span class="eyebrow">처치</span><div class="num" style="font-size:24px">${S.stats.kills}</div></div>
+      <div><span class="eyebrow">덱</span><div class="num" style="font-size:24px">${S.deck.length}장</div></div>
+      <div><span class="eyebrow">끝까지 남은 수감자</span><div>${alive.join(', ')||'없음'}</div></div>
+    </div>
+    <div class="row"><button type="button" class="btn primary" data-a="new">새 원정</button><button type="button" class="btn" data-a="title">타이틀로</button></div>
+  </section>`;
+}
+/* --- 모달 --- */
+function openModal(html){ const m=document.getElementById('modal'); m.innerHTML=`<div class="modal-box" role="dialog" aria-modal="true">${html}<div class="row"><button type="button" class="btn" data-a="close">닫기</button></div></div>`; m.hidden=false; const b=m.querySelector('[data-a="close"]'); b&&b.focus(); }
+function closeModal(){ const m=document.getElementById('modal'); m.hidden=true; m.innerHTML=''; }
+function helpHTML(){
+  return `<h2>규칙</h2><div class="rules">
+    <div><h3>목표 · 테마 팩</h3><p>층마다 테마 팩 3개 중 하나를 고른다. 팩이 그 층의 적, 보스, E.G.O 기프트, 특성을 정한다. 지도 아래에서 위로 올라가 보스를 쓰러뜨리면 다음 층. 3층 보스까지 쓰러뜨리면 데모 클리어. 층이 오를수록 적 체력 +20%, 3층은 위력도 +1.</p></div>
+    <div><h3>사건(?) 판정</h3><p>판정 선택지는 수감자 1명을 골라 코인을 던진다. 성공 확률 = 기본값 + 죄악 자원 일치(주 +35, 부 +20) + SP의 절반.</p></div>
+    <div><h3>턴 진행</h3><p>내 턴: 에너지 3, 카드 5장. 카드를 쓰고 턴 종료 → 적이 미리 보여 준 행동을 한다 → 화상·지속 효과 처리 → 다음 라운드. 방어도는 내 턴이 시작될 때 사라진다.</p></div>
+    <div><h3>진형</h3><p>1열이 맨 앞. 카드마다 쓸 수 있는 열과 노릴 수 있는 적의 열이 있다. 수감자를 누르면 에너지 1로 옆 칸과 자리를 바꾼다. 쓰러진 자리는 뒤에 있던 수감자가 채운다.</p></div>
+    <div><h3>코인</h3><p>공격 위력 = 기본 위력 + 앞면 코인 수 × 코인 위력. 수감자의 앞면 확률은 50% + SP (최소 5%, 최대 95%). 적은 항상 50%.</p></div>
+    <div><h3>적의 의도 · 빨간 선</h3><p>내 턴 동안 적이 이번 라운드에 할 행동이 보인다. 빨간 선은 공격, 보라색 선은 정신 공격이고, 선 위 숫자가 위력 범위다. 내 턴이 끝나면 그대로 실행된다.</p></div>
+    <div><h3>합</h3><p>단일 대상 공격을 준비한 적을 공격 카드로 노리면 누가 노려졌든 합이 벌어진다(선이 금색으로 바뀐다). 서로 코인을 던져 위력이 낮은 쪽이 코인 1개를 잃고, 코인이 바닥나면 진다. 이기면 적의 공격을 취소하고 남은 코인으로 때린다(SP 상승). 지면 그 공격을 합을 건 수감자가 대신 맞는다. 전체 공격은 합을 걸 수 없다.</p></div>
+    <div><h3>회피 · 수비</h3><p>회피·수비 카드는 이번 라운드 동안 자세를 잡는다. <b>회피</b>: 공격받으면 코인을 던져 공격 위력보다 같거나 높으면 피해 0. 성공하는 동안 계속 유지되고 실패하면 사라진다. <b>수비</b>: 처음 받는 공격의 피해를 굴린 수치만큼 줄이고 사라진다. 자세는 내 턴이 시작될 때 풀린다.</p></div>
+    <div><h3>SP · 패닉</h3><p>SP는 -45~45. <b>원정을 시작할 때 0이고, 전투가 끝나도 그대로 이어진다.</b> 기본 규칙(림버스 방식)은 합 승리 +10, 적 처치 +10, 동료가 쓰러짐 -10이며 인격마다 다를 수 있다(편성 화면에 표시). 적의 정신 공격, 카드, 사건, 휴식, 기프트도 SP를 바꾼다. 라운드 시작에 SP가 -45면 패닉: 그 턴 동안 그 수감자의 카드를 못 쓴다.</p></div>
+    <div><h3>흐트러짐</h3><p>적 체력 바의 금색 선 아래로 체력이 떨어지면 흐트러진다. 그 라운드의 행동이 취소되고 받는 피해 +50%.</p></div>
+    <div><h3>카드 키워드</h3><p>${Object.values(KEYWORDS).map(k=>`<b>${k[0]}</b>: ${k[1]}`).join('<br>')}<br><b>파워</b>: 쓰면 전투가 끝날 때까지 효과가 계속된다.<br><b>X 비용</b>: 남은 에너지를 모두 쓰고, 쓴 만큼 효과가 커진다.<br><b>무색</b>: 누구나, 어느 열에서나 쓸 수 있다. 상점에서 판다.</p></div>
+    <div><h3>상태</h3><p>${Object.values(STATUS).map(s=>`<b>${s.n}</b>: ${s.d}`).join('<br>')}</p></div>
+    <div><h3>단테의 시계</h3><p>전투가 끝난 뒤 태엽 1개로 쓰러진 수감자를 체력 30%로 되살린다(SP -20). 되살리지 않으면 그 수감자는 원정에서 떠나고 카드도 덱에서 빠진다.</p></div>
+    <div><h3>저장</h3><p>지도·보상·사건 화면에서 이 브라우저에 자동 저장된다. 전투 중에 창을 닫으면 그 전투를 처음부터 다시 한다.</p></div>
+  </div>`;
+}
+function deckHTML(){
+  const sorted=S.deck.slice().sort((a,b)=>(CARDS[a.id].owner||'z').localeCompare(CARDS[b.id].owner||'z')||a.id.localeCompare(b.id));
+  return `<h2>덱 · 가져갈 카드 ${activeDeck().length}장 / 전체 ${S.deck.length}장</h2><div class="cards-grid">${sorted.map(c=>cardHTML(c,{action:'noop',key:c.u,state:c.off?'benched':''})).join('')}</div>`;
+}
+
+/* =========================================================
+   10. 입력
+   ========================================================= */
+function handle(a,el){
+  const id=el.dataset.id, i=el.dataset.i!=null?+el.dataset.i:null;
+  switch(a){
+    case 'noop': return;
+    case 'speed': A.speed=A.speed===1?2:A.speed===2?0:1; try{localStorage.setItem('md-speed',String(A.speed))}catch(e){} toast(`연출 속도: ${SPEED_NAME[A.speed]}`); render(); return;
+    case 'close': closeModal(); return;
+    case 'help': openModal(helpHTML()); return;
+    case 'deck': if(S) openModal(deckHTML()); return;
+    case 'gifts': if(S) openModal(`<h2>E.G.O 기프트 · ${S.gifts.length}개</h2>${giftListHTML()}`); return;
+    case 'title': closeModal(); C=null; if(S&&S.screen==='result') clearSave(); S=null; render(); return;
+    case 'new': closeModal(); clearSave(); C=null; SEL=[]; S={screen:'select'}; renderSelect(); return;
+    case 'continue':{ const sv=loadSave(); if(sv){ S=sv; C=null; render(); } return; }
+    case 'abandon':
+      openModal(`<h2>원정을 포기할까?</h2><p class="muted">저장된 진행이 지워진다.</p><div class="row"><button type="button" class="btn danger" data-a="abandonyes">포기한다</button></div>`); return;
+    case 'abandonyes': closeModal(); endRun(false); return;
+    case 'pick':{ const k=SEL.indexOf(id); if(k>=0) SEL.splice(k,1); else if(SEL.length<4) SEL.push(id); else toast('4명까지 고를 수 있다'); renderSelect(); return; }
+    case 'fm':{ const d=+el.dataset.d, j=i+d; if(j<0||j>=SEL.length) return; [SEL[i],SEL[j]]=[SEL[j],SEL[i]]; renderSelect(); return; }
+    case 'start': if(SEL.length===4){ newRun(SEL); render(); } return;
+    case 'tomap': if(S){ C=null; S.screen='map'; render(); } return;
+    case 'node': enterNode(id); return;
+    case 'cons':{
+      if(C&&(C.busy||C.over)) return;
+      if(UI.cons===i){ UI.cons=null; render(); return; }
+      const K=CONS[S.cons[i]]; if(!K) return;
+      if(K.combatOnly&&!C){ toast('전투 중에만 쓸 수 있다'); return; }
+      UI.cons=i; UI.sel=null; UI.selUnit=null; render(); return; }
+    case 'mapally':
+      if(UI.cons!=null&&CONS[S.cons[UI.cons]]?.target==='ally'){ if(useCons(UI.cons,id)) render(); }
+      return;
+    case 'card':{
+      if(!C||C.busy||C.over) return;
+      if(UI.cons!=null){ UI.cons=null; }
+      const inst=C.hand.find(c=>c.u===id); if(!inst) return;
+      const chk=canPlay(inst);
+      if(!chk.ok){ toast(chk.why); UI.sel=null; render(); return; }
+      const d=cdef(inst);
+      if(UI.sel===id){
+        if(['self','allAllies','allEnemies','none'].includes(d.target)) playCard(id,null);
+        else UI.sel=null;
+      } else { UI.sel=id; UI.selUnit=null; }
+      render(); return; }
+    case 'enemy':{
+      if(!C||C.busy||C.over) return;
+      if(UI.cons!=null&&CONS[S.cons[UI.cons]]?.target==='allEnemies'){ useCons(UI.cons,null); render(); return; }
+      if(!UI.sel) return;
+      const inst=C.hand.find(c=>c.u===UI.sel); if(!inst) return;
+      const d=cdef(inst);
+      if(d.target==='enemy') playCard(UI.sel,id);
+      else if(d.target==='allEnemies') playCard(UI.sel,null);
+      render(); return; }
+    case 'ally':{
+      if(!C||C.busy||C.over) return;
+      if(UI.cons!=null){ if(CONS[S.cons[UI.cons]]?.target==='ally'&&useCons(UI.cons,id)) render(); return; }
+      if(UI.sel){
+        const inst=C.hand.find(c=>c.u===UI.sel); const d=inst&&cdef(inst);
+        if(d&&d.target==='ally'){ if(validAllies(d).includes(id)) playCard(UI.sel,id); else toast('그 수감자는 대상이 될 수 없다'); render(); return; }
+        if(d&&['self','allAllies'].includes(d.target)){ playCard(UI.sel,null); render(); return; }
+        UI.sel=null;
+      }
+      UI.selUnit=UI.selUnit===id?null:id; render(); return; }
+    case 'move': moveAction(id,+el.dataset.d); return;
+    case 'end': endTurn(); return;
+    case 'rwcard': if(!S.reward.cardDone){ S.deck.push(mkCard(id)); S.reward.cardDone=true; save(); toast(`${CARDS[id].name}을(를) 덱에 넣었다`); render(); } return;
+    case 'rwskip': S.reward.cardDone='skip'; save(); render(); return;
+    case 'rwgift': if(S.reward.gift&&!S.reward.giftDone){ S.gifts.push(S.reward.gift); S.reward.giftDone=true; save(); render(); } return;
+    case 'revive':{
+      const p=S.party[id]; if(!p||!p.down||S.clocks<1) return;
+      S.clocks--; p.down=false; p.hp=Math.ceil(p.max*.3); addStartSp(id,-20); S.formation.push(id);
+      S.reward.down=S.reward.down.filter(x=>x!==id); save(); toast(`째깍. ${sname(id)}이(가) 되살아났다`); render(); return; }
+    case 'letgo':{
+      const p=S.party[id]; if(!p) return;
+      p.down=false; p.gone=true; S.deck=S.deck.filter(c=>CARDS[c.id].owner!==id);
+      S.reward.down=S.reward.down.filter(x=>x!==id); save(); render(); return; }
+    case 'rwdone': if(!S.reward.down.length) completeNode(); return;
+    case 'evopt':{
+      if(S.event.result||UI.evBusy) return;
+      const o=EVENTS[S.event.id].opts[i]; if(!o||(o.can&&!o.can())) return;
+      if(o.check){ S.event.picking=i; render(); return; }
+      S.event.result=o.run(); save(); render(); return; }
+    case 'evback': if(!UI.evBusy){ S.event.picking=null; render(); } return;
+    case 'evsinner': return resolveCheck(id);
+    case 'pack': choosePack(id); return;
+    case 'prepopen': if(S.screen==='map'){ S.prep={node:null}; S.screen='prep'; save(); render(); } return;
+    case 'pstart': startPrepared(); return;
+    case 'pback': if(S.prep&&!S.prep.node&&activeDeck().length<minDeck()){ toast(`가져갈 카드가 ${minDeck()}장 이상이어야 한다`); return; } S.prep=null; S.screen='map'; save(); render(); return;
+    case 'pfm':{ const d=+el.dataset.d, j=i+d; if(j<0||j>=S.formation.length) return; [S.formation[i],S.formation[j]]=[S.formation[j],S.formation[i]]; save(); render(); return; }
+    case 'pcard':{
+      const c=S.deck.find(x=>x.u===id); if(!c) return;
+      if(!c.off&&CARDS[c.id].type==='저주'){ toast('저주는 뺄 수 없다'); return; }
+      if(!c.off&&activeDeck().length<=minDeck()){ toast(`가져갈 카드는 최소 ${minDeck()}장`); return; }
+      c.off=!c.off; save(); render(); return; }
+    case 'done': completeNode(); return;
+    case 'rest':{
+      const k=el.dataset.k;
+      if(k==='heal'){ S.formation.forEach(s=>healSinner(s,Math.ceil(S.party[s].max*.3))); S.rest.done='모두 상처를 싸매고 눈을 붙였다. 최대 체력의 30%를 회복했다.'; }
+      else if(k==='talk'){ allSp(20); S.rest.done='시시한 농담이 오가고, 누군가 웃었다. 모두 SP +20.'; }
+      else if(k==='up'){ S.rest.picking=true; }
+      save(); render(); return; }
+    case 'restback': S.rest.picking=false; render(); return;
+    case 'restup':{ const c=S.deck.find(x=>x.u===id); if(c&&canUpgrade(c)){ c.up=true; S.rest.picking=false; S.rest.done=`${CARDS[c.id].name}을(를) 강화했다.`; save(); render(); } return; }
+    case 'buycard':{
+      const it=S.shop.cards[+id]; if(!it||it.sold) return; const pr=PRICE[CARDS[it.id].rar];
+      if(S.enk<pr){ toast('엔케팔린이 부족하다'); return; }
+      S.enk-=pr; it.sold=true; S.deck.push(mkCard(it.id)); save(); render(); return; }
+    case 'buygift':{ const g=S.shop.gifts[i]; if(!g||g.sold||S.enk<g.price) return; S.enk-=g.price; g.sold=true; S.gifts.push(g.id); save(); render(); return; }
+    case 'buycons':{ const cn=S.shop.cons; if(cn.sold||S.enk<30||S.cons.length>=3) return; S.enk-=30; cn.sold=true; S.cons.push(cn.id); save(); render(); return; }
+    case 'remove': if(!S.shop.removed&&S.enk>=50&&S.deck.length>5){ S.shop.removing=true; render(); } return;
+    case 'removeback': S.shop.removing=false; render(); return;
+    case 'removecard':{ if(S.shop.removed) return; const c=S.deck.find(x=>x.u===id); if(!c) return; S.enk-=50; S.deck=S.deck.filter(x=>x!==c); S.shop.removed=true; S.shop.removing=false; save(); toast(`${CARDS[c.id].name}을(를) 덱에서 뺐다`); render(); return; }
+  }
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]'); if(!el) return;
+  if(el.closest('#modal')&&el.dataset.a==='noop') return;
+  if(el.disabled||el.getAttribute('aria-disabled')==='true'&&el.dataset.a!=='card'){ return; }
+  try{ handle(el.dataset.a,el); }catch(err){ console.error(err); toast('오류가 났다: '+(err.message||err)); }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ if(!document.getElementById('modal').hidden){ closeModal(); return; } UI.sel=null; UI.selUnit=null; UI.cons=null; if(S) render(); return; }
+  if((e.key==='e'||e.key==='E')&&S&&S.screen==='combat'&&document.getElementById('modal').hidden&&!e.target.closest('input,textarea')){ endTurn(); return; }
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('[role="button"][data-a]')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click',{bubbles:true})); }
+});
+document.getElementById('modal').addEventListener('click',e=>{ if(e.target.id==='modal') closeModal(); });
+
+// 테스트용 핸들
+Stage.el=document.getElementById('stage');
+Stage.el.addEventListener('click',()=>{A.skip=true;Stage.close();});
+window.__md={get S(){return S},get C(){return C},handle:(a,ds={})=>handle(a,{dataset:ds}),canPlay,cdef,validEnemies,validAllies,reachable,playCard,endTurn,setDelay:v=>{FAST=v===0}};
+
+render();
+})();
+</script>
+
+</body>
+</html>
